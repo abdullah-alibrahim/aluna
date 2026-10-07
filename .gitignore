@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Builds
+dist/
+build/
+*.apk
+*.aab
+*.ipa
+userapp/android/app/build/
+userapp/android/.gradle/
+userapp/ios/build/
+userapp/ios/Pods/
+userapp/.expo/
+userapp/dist/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+google-services.json
+GoogleService-Info.plist
+*.keystore
+*.jks
+credentials.json
+
+# Logs / OS / IDE
+*.log
+npm-debug.log*
+.DS_Store
+.idea/
+.vscode/
+*.swp
+.cursor/
+
+# Caches
+.turbo/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Native / tooling
+android/.cxx/
+**/.cxx/
+*.hprof
+.metro-health-check*
+
+# Archives
+*.zip
+!FreshCut_Documentation.zip
+FreshCut_Documentation.zip

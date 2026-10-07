@@ -1,0 +1,34 @@
+appId: host.exp.Exponent
+---
+- launchApp
+- tapOn: "ألونا"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      text: ".*"
+    timeout: 90000
+- runFlow:
+    when:
+      visible: "تخطي"
+    commands:
+      - tapOn: "تخطي"
+- runFlow:
+    when:
+      visible: "تصفح كزائر"
+    commands:
+      - tapOn: "تصفح كزائر"
+- waitForAnimationToEnd
+- takeScreenshot: 01-home
+- runFlow:
+    when:
+      visible: "استكشف"
+    commands:
+      - tapOn: "استكشف"
+- waitForAnimationToEnd
+- takeScreenshot: 02-discover
+- runFlow:
+    when:
+      visible: "الرئيسية"
+    commands:
+      - tapOn: "الرئيسية"
+- takeScreenshot: 03-home2

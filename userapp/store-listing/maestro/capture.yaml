@@ -1,0 +1,23 @@
+appId: com.shakeeldev.freshcutuserapp
+---
+- launchApp
+- waitForAnimationToEnd
+- tapOn: "تخطي"
+- tapOn:
+    id: "browse-as-guest"
+- waitForAnimationToEnd
+- takeScreenshot: ../raw/android/01-home
+- tapOn: "استكشف"
+- waitForAnimationToEnd
+- takeScreenshot: ../raw/android/02-discover
+- tapOn:
+    index: 0
+    below: "استكشف"
+- waitForAnimationToEnd
+- takeScreenshot: ../raw/android/03-shop
+- tapOn: "احجزي الآن"
+- waitForAnimationToEnd
+- takeScreenshot: ../raw/android/04-booking
+- tapOn: "حسابي"
+- waitForAnimationToEnd
+- takeScreenshot: ../raw/android/05-cash

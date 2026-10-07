@@ -1,0 +1,6 @@
+{
+  "CFBundleDisplayName": "ألونا",
+  "NSPhotoLibraryUsageDescription": "نحتاج الوصول للصور لتحديث صورة الملف الشخصي.",
+  "NSCameraUsageDescription": "نحتاج الكاميرا لالتقاط صورة الملف الشخصي.",
+  "NSLocationWhenInUseUsageDescription": "نستخدم موقعك لعرض الصالونات القريبة منك."
+}

@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "Aluna Admin",
+    "slug": "adminapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shakeeldev.freshcutadminapp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F9F5EB",
+        "foregroundImage": "./assets/logo.png",
+        "backgroundImage": "./assets/logo.png",
+        "monochromeImage": "./assets/logo.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.shakeeldev.freshcutadminapp"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F9F5EB"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends.",
+          "colors": {
+            "cropToolbarColor": "#000000"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#000000"
+            }
+          }
+        }
+      ],
+      "expo-splash-screen",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4660d5a6-9f5f-44d3-bd29-919c13693b7e"
+      }
+    }
+  }
+}

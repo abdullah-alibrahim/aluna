@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "Aluna Owner",
+    "slug": "ownerapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/logo.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.shakeeldev.freshcutownerapp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F9F5EB",
+        "foregroundImage": "./assets/logo.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.shakeeldev.freshcutownerapp",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F9F5EB"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends.",
+          "colors": {
+            "cropToolbarColor": "#000000"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#000000"
+            }
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo.png",
+          "color": "#B59451"
+        }
+      ],
+      "expo-splash-screen",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "da34a80f-1836-4409-8a91-799678456586"
+      }
+    }
+  }
+}

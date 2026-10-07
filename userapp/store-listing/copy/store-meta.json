@@ -1,0 +1,32 @@
+{
+  "appName": {
+    "ar": "ألونا",
+    "en": "Aluna"
+  },
+  "package": "com.shakeeldev.freshcutuserapp",
+  "version": "1.0.0",
+  "primaryLocale": "ar-SY",
+  "secondaryLocale": "en-US",
+  "category": {
+    "play": "Beauty",
+    "appStorePrimary": "Lifestyle",
+    "appStoreSecondary": "Health & Fitness"
+  },
+  "contact": {
+    "supportEmail": "support@aluna.app",
+    "privacyUrl": "https://YOUR_DOMAIN/privacy",
+    "termsUrl": "https://YOUR_DOMAIN/terms"
+  },
+  "assets": {
+    "icon512": "images/icon-512.png",
+    "icon1024": "images/icon-1024.png",
+    "featureGraphic": "images/feature-graphic-1024x500.png",
+    "screenshots": [
+      "screenshots/01-home.png",
+      "screenshots/02-discover.png",
+      "screenshots/03-booking.png",
+      "screenshots/04-cash.png",
+      "screenshots/05-group.png"
+    ]
+  }
+}

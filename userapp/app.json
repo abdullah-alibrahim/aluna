@@ -1,0 +1,106 @@
+{
+  "expo": {
+    "name": "ألونا",
+    "slug": "aluna-user",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon-store.png",
+    "userInterfaceStyle": "light",
+    "scheme": "aluna",
+    "primaryColor": "#B59451",
+    "description": "ألونا — احجزي موعدك في صالونات التجميل والحلاقة في سوريا. نقداً فقط.",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.shakeeldev.freshcutuserapp",
+      "buildNumber": "1",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleDevelopmentRegion": "ar",
+        "NSPhotoLibraryUsageDescription": "نحتاج الوصول للصور لتحديث صورة الملف الشخصي.",
+        "NSCameraUsageDescription": "نحتاج الكاميرا لالتقاط صورة الملف الشخصي.",
+        "NSLocationWhenInUseUsageDescription": "نستخدم موقعك لعرض الصالونات القريبة منك.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F9F5EB",
+        "foregroundImage": "./assets/adaptive-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.shakeeldev.freshcutuserapp",
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.VIBRATE",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ],
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.shakeeldev.freshcutuserapp"
+    },
+    "locales": {
+      "ar": "./locales/ar.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon-store.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F9F5EB"
+        }
+      ],
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "نحتاج الوصول للصور لتحديث صورة الملف الشخصي.",
+          "cameraPermission": "نحتاج الكاميرا لالتقاط صورة الملف الشخصي."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/adaptive-foreground.png",
+          "color": "#B59451",
+          "defaultChannel": "default"
+        }
+      ],
+      "expo-secure-store",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a04eeaed-c70a-4351-bfed-0b354b002c47"
+      },
+      "privacyPolicyUrl": "https://REPLACE_WITH_YOUR_DOMAIN/privacy",
+      "termsUrl": "https://REPLACE_WITH_YOUR_DOMAIN/terms"
+    },
+    "owner": "shakeeldev"
+  }
+}
