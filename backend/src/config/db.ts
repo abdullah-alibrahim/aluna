@@ -24,6 +24,11 @@ export const connectDB = async () => {
         const { runFullSyriaSeed } = await import('../services/seedSyriaData');
         await runFullSyriaSeed();
         console.log(`Syria auto-seed applied (${memory ? 'memory' : 'AUTO_SEED=1'})`);
+        if (memory || process.env.SEED_TEST_ACCOUNTS === '1') {
+          const { seedTestAccounts } = await import('../scripts/seedTestAccounts');
+          await seedTestAccounts();
+          console.log('Test accounts seeded');
+        }
       }
     } catch (seedErr) {
       console.error('Auto-seed failed:', (seedErr as Error).message);

@@ -1,0 +1,33 @@
+# Aluna API — Render Blueprint
+# Dashboard: New → Blueprint → connect abdullah-alibrahim/aluna
+services:
+  - type: web
+    name: aluna-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: MONGO_URI
+        value: mongodb://127.0.0.1:27017/salonapp
+      - key: USE_MEMORY_MONGO
+        value: "1"
+      - key: ALLOW_PASSWORD_AUTH
+        value: "1"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_INVITE_CODE
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false

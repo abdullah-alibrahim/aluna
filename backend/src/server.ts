@@ -18,7 +18,7 @@ const startServer = async () => {
   // Initialize Scheduler
   initScheduler();
 
-  server.listen(PORT, () => {
+  server.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running in ${env.NODE_ENV} mode on port ${PORT}`);
   });
 

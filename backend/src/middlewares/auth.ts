@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import '../config/firebase'; // Ensure Firebase is initialized
 import { getAuth } from 'firebase-admin/auth';
 import { env } from '../config/env';
 import { UnauthorizedError, ForbiddenError } from '../utils/errors';
 import User, { IUser, UserRole } from '../models/User';
 
-// Removed JwtPayload interface
+const JWT_SECRET = env.JWT_SECRET || 'aluna-dev-jwt-secret-change-me';
 
 // Extend Request interface to include user
 declare global {
@@ -17,7 +18,7 @@ declare global {
 }
 
 export const protect = async (req: Request, res: Response, next: NextFunction) => {
-  let token;
+  let token: string | undefined;
 
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
@@ -25,6 +26,23 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
   if (!token) {
     return next(new UnauthorizedError('Not authorized to access this route'));
+  }
+
+  // Password-auth JWT (when Firebase Admin is not configured)
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as { uid?: string; email?: string; typ?: string };
+    if (decoded?.typ === 'password' && (decoded.uid || decoded.email)) {
+      const user =
+        (decoded.uid && (await User.findById(decoded.uid))) ||
+        (decoded.email ? await User.findOne({ email: decoded.email }) : null);
+      if (!user) {
+        return next(new UnauthorizedError('User belonging to this token does not exist'));
+      }
+      req.user = user;
+      return next();
+    }
+  } catch {
+    /* not our JWT — try Firebase */
   }
 
   try {

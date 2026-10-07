@@ -14,6 +14,8 @@ const envSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_PRIVATE_KEY: z.string().optional(),
   ADMIN_INVITE_CODE: z.string().optional(),
+  JWT_SECRET: z.string().optional(),
+  ALLOW_PASSWORD_AUTH: z.string().optional(),
   CORS_ORIGIN: z.string().default('*'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });

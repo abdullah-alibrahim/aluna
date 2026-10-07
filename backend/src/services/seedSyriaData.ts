@@ -47,7 +47,7 @@ export const SYRIAN_CITIES: { name: string; coordinates: [number, number] }[] = 
 
 const CATEGORIES = [
   { name: 'حلاقة رجالية', description: 'قص وتصفيف للرجال' },
-  { name: 'صالون نسائي', description: 'قص وصبغ وتصفيف للنساء' },
+  { name: 'مركز تجميل نسائي', description: 'قص وصبغ وتصفيف للنساء' },
   { name: 'عناية بالبشرة', description: 'تنظيف وعلاجات البشرة' },
   { name: 'مكياج', description: 'مكياج مناسبات ويومي' },
   { name: 'أظافر', description: 'مانيكير وباديكير' },
@@ -58,12 +58,12 @@ const CATEGORIES = [
 const USER_FAQS = [
   {
     question: 'كيف أحجز موعداً؟',
-    answer: 'اختر الصالون والخدمة والموظف ثم أكّد الموعد وادفع نقداً في الصالون أو إلكترونياً إن كان متاحاً.',
+    answer: 'اختر مركز التجميل والخدمة والموظف ثم أكّد الموعد وادفع نقداً في المركز أو إلكترونياً إن كان متاحاً.',
     target: 'user',
   },
   {
     question: 'هل يمكنني الإلغاء؟',
-    answer: 'نعم، يمكنك إلغاء الموعد من تبويب حجوزاتي. الإلغاء المجاني قبل ساعات محددة؛ بعدها قد يُطبَّق عربون أو رسوم عدم حضور حسب سياسة الصالون.',
+    answer: 'نعم، يمكنك إلغاء الموعد من تبويب حجوزاتي. الإلغاء المجاني قبل ساعات محددة؛ بعدها قد يُطبَّق عربون أو رسوم عدم حضور حسب سياسة مركز التجميل.',
     target: 'user',
   },
   {
@@ -75,8 +75,8 @@ const USER_FAQS = [
 
 const OWNER_FAQS = [
   {
-    question: 'كيف أفعّل صالوني؟',
-    answer: 'أنشئ الصالون، أضف الخدمات والموظفين وساعات العمل، ثم انتظر موافقة الإدارة.',
+    question: 'كيف أفعّل مركزي؟',
+    answer: 'أنشئ مركز التجميل، أضف الخدمات والموظفين وساعات العمل، ثم انتظر موافقة الإدارة.',
     target: 'owner',
   },
   {
@@ -107,10 +107,10 @@ type DemoShop = {
 const DEMO_SHOPS: DemoShop[] = [
   {
     name: 'ألونا بوتيك دمشق',
-    description: 'صالون نسائي فاخر في قلب دمشق — قص، صبغ، وتصفيف مناسبات.',
+    description: 'مركز تجميل نسائي فاخر في قلب دمشق — قص، صبغ، وتصفيف مناسبات.',
     address: 'شارع أبو رمانة، دمشق',
     cityName: 'دمشق',
-    categoryNames: ['صالون نسائي', 'مكياج'],
+    categoryNames: ['مركز تجميل نسائي', 'مكياج'],
     featured: true,
     rating: 4.8,
     reviewCount: 42,
@@ -123,8 +123,8 @@ const DEMO_SHOPS: DemoShop[] = [
       'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80',
     ],
     services: [
-      { name: 'قص وتصفيف', price: 75000, duration: 45, categoryName: 'صالون نسائي' },
-      { name: 'صبغة كاملة', price: 180000, duration: 90, categoryName: 'صالون نسائي' },
+      { name: 'قص وتصفيف', price: 75000, duration: 45, categoryName: 'مركز تجميل نسائي' },
+      { name: 'صبغة كاملة', price: 180000, duration: 90, categoryName: 'مركز تجميل نسائي' },
       { name: 'مكياج سهرة', price: 120000, duration: 60, categoryName: 'مكياج' },
     ],
     staff: [

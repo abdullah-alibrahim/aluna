@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import User, { UserRole } from '../models/User';
 import PlatformSettings from '../models/PlatformSettings';
 import City from '../models/City';
@@ -8,6 +10,13 @@ import { BadRequestError, UnauthorizedError, ForbiddenError } from '../utils/err
 
 import '../config/firebase'; // Ensure Firebase is initialized
 import { getAuth } from 'firebase-admin/auth';
+
+const JWT_SECRET = env.JWT_SECRET || 'aluna-dev-jwt-secret-change-me';
+const passwordAuthEnabled =
+  env.ALLOW_PASSWORD_AUTH === '1' ||
+  !env.FIREBASE_PROJECT_ID ||
+  !env.FIREBASE_CLIENT_EMAIL ||
+  !env.FIREBASE_PRIVATE_KEY;
 
 const PUBLIC_ROLES = new Set<string>([UserRole.USER, UserRole.OWNER]);
 
@@ -122,9 +131,57 @@ export const login = async (req: Request, res: Response) => {
   });
 };
 
+/** Email/password login for dashboard when Firebase Admin is not configured. */
+export const passwordLogin = async (req: Request, res: Response) => {
+  if (!passwordAuthEnabled) {
+    throw new ForbiddenError('تسجيل الدخول بكلمة المرور غير مفعّل');
+  }
+
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  if (!email || !password) {
+    throw new BadRequestError('البريد وكلمة المرور مطلوبان');
+  }
+
+  const user = await User.findOne({ email }).select('+password');
+  if (!user?.password) {
+    throw new UnauthorizedError('بيانات الدخول غير صحيحة');
+  }
+
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) {
+    throw new UnauthorizedError('بيانات الدخول غير صحيحة');
+  }
+
+  const token = jwt.sign(
+    { typ: 'password', uid: user.id, email: user.email, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+  );
+
+  res.json({
+    _id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    isVerified: user.isVerified,
+    token,
+  });
+};
+
 export const getMe = async (req: Request, res: Response) => {
   const user = await User.findById(req.user?.id);
   res.json(user);
+};
+
+/** Dev helper: seed admin/owner/customer into the running DB (password auth only). */
+export const seedTestAccountsHandler = async (_req: Request, res: Response) => {
+  if (!passwordAuthEnabled) {
+    throw new ForbiddenError('غير متاح');
+  }
+  const { seedTestAccounts } = await import('../scripts/seedTestAccounts');
+  const result = await seedTestAccounts();
+  res.json({ ok: true, ...result });
 };
 
 export const syncVerification = async (req: Request, res: Response) => {
