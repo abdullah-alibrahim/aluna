@@ -62,7 +62,10 @@ router.route('/categories')
 router.put('/categories/:id', upload.single('image'), catchAsync(updateCategory));
 
 router.post('/shops', upload.array('images', 5), catchAsync(addShop));
+router.post('/shops/', upload.array('images', 5), catchAsync(addShop));
 router.route('/shops')
+  .get(catchAsync(getAllShops));
+router.route('/shops/')
   .get(catchAsync(getAllShops));
 router.get('/shops/pending', catchAsync(getPendingShops));
 router.patch('/shops/:id/status', catchAsync(updateShopStatus));
