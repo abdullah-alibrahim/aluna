@@ -78,6 +78,8 @@ app.use('/api/auth/password-login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+// Fallback direct registration for Vercel
+app.post('/api/admin/shops', require('./middleware/upload').default.array('images', 5), require('./utils/catchAsync').catchAsync(require('./controllers/admin.controller').addShop));
 app.use('/api/owner', ownerRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/notifications', notificationRoutes);
