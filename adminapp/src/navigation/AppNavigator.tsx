@@ -46,6 +46,7 @@ const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        id="AdminStack"
         screenOptions={{
           headerShown: false,
           animation: 'fade',

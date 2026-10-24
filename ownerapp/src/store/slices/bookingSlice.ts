@@ -26,20 +26,24 @@ interface BookingState {
   bookings: Booking[];
   loading: boolean;
   error: string | null;
+  hasMore: boolean;
 }
 
 const initialState: BookingState = {
   bookings: [],
   loading: false,
   error: null,
+  hasMore: true,
 };
 
 export const fetchShopBookings = createAsyncThunk(
   'bookings/fetchShopBookings',
-  async (shopId: string, { rejectWithValue }) => {
+  async ({ shopId, limit = 20, skip = 0 }: { shopId: string; limit?: number; skip?: number }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.get(`/owner/shops/${shopId}/bookings`);
-      return response.data;
+      const response = await apiClient.get(`/owner/shops/${shopId}/bookings`, {
+        params: { limit, skip },
+      });
+      return { data: response.data, skip };
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'فشل جلب الحجوزات');
     }
@@ -64,6 +68,12 @@ const bookingSlice = createSlice({
   reducers: {
     clearBookings: (state) => {
       state.bookings = [];
+      state.hasMore = true;
+    },
+    resetBookings: (state) => {
+      state.bookings = [];
+      state.hasMore = true;
+      state.error = null;
     }
   },
   extraReducers: (builder) => {
@@ -74,7 +84,13 @@ const bookingSlice = createSlice({
       })
       .addCase(fetchShopBookings.fulfilled, (state, action) => {
         state.loading = false;
-        state.bookings = action.payload;
+        const { data, skip } = action.payload as any;
+        if (skip === 0) {
+          state.bookings = data;
+        } else {
+          state.bookings = [...state.bookings, ...data];
+        }
+        state.hasMore = data.length > 0;
       })
       .addCase(fetchShopBookings.rejected, (state, action) => {
         state.loading = false;
@@ -89,5 +105,5 @@ const bookingSlice = createSlice({
   },
 });
 
-export const { clearBookings } = bookingSlice.actions;
+export const { clearBookings, resetBookings } = bookingSlice.actions;
 export default bookingSlice.reducer;

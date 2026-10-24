@@ -48,7 +48,7 @@ const ManageServicesScreen = () => {
   const { shop } = route.params as { shop: Shop };
   const dispatch = useAppDispatch();
 
-  const { services, loading, actionLoading } = useAppSelector((state) => state.services);
+  const { services, loading, actionLoading, hasMore } = useAppSelector((state) => state.services);
   const { categories } = useAppSelector((state) => state.categories);
   const { settings } = useAppSelector((state) => state.settings || { settings: null });
 
@@ -73,6 +73,8 @@ const ManageServicesScreen = () => {
   });
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [skip, setSkip] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   
   // Form State
@@ -89,7 +91,8 @@ const ManageServicesScreen = () => {
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
 
   useEffect(() => {
-    dispatch(fetchServices(shop._id));
+    dispatch(fetchServices({ shopId: shop._id, limit: 20, skip: 0 }));
+    setSkip(0);
     if (categories.length === 0) {
       dispatch(fetchCategories());
     }
@@ -148,6 +151,19 @@ const ManageServicesScreen = () => {
     }
   };
 
+  const loadMore = () => {
+    if (!hasMore || loading) return;
+    dispatch(fetchServices({ shopId: shop._id, limit: 20, skip: skip + 20 }));
+    setSkip(skip + 20);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    dispatch(fetchServices({ shopId: shop._id, limit: 20, skip: 0 }));
+    setSkip(0);
+    setRefreshing(false);
+  };
+
   const handleSave = async () => {
     if (!name || !price || !duration || !categoryId) {
       Alert.alert(t('common.validationError'), t('common.fillRequired'));
@@ -177,7 +193,7 @@ const ManageServicesScreen = () => {
         await dispatch(addService({ shopId: shop._id, formData })).unwrap();
       }
       setModalVisible(false);
-      dispatch(fetchServices(shop._id));
+      dispatch(fetchServices({ shopId: shop._id, limit: 20, skip: 0 }));
     } catch (err: any) {
       Alert.alert(t('common.error'), typeof err === 'string' ? err : err?.message || JSON.stringify(err) || t('common.genericError'));
     }
@@ -267,6 +283,15 @@ const ManageServicesScreen = () => {
           renderItem={renderServiceCard}
           contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={hasMore && !loading ? (
+            <View className="py-4 items-center">
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : null}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
 

@@ -53,7 +53,7 @@ const AuthStack = ({
   hasSeenOnboarding: boolean | null;
   authEntryScreen: 'Login' | 'Register' | null;
 }) => (
-  <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 280 }}>
+  <Stack.Navigator id="AuthStack" screenOptions={{ headerShown: false, animation: 'fade', animationDuration: 280 }}>
     {!hasSeenOnboarding && <Stack.Screen name="Onboarding" component={OnboardingScreen} />}
     {authEntryScreen === 'Register' ? (
       <>
@@ -71,7 +71,7 @@ const AuthStack = ({
 );
 
 const AppStack = ({ needsVerification }: { needsVerification: boolean }) => (
-  <Stack.Navigator screenOptions={{ headerShown: false, animation: 'none' }}>
+  <Stack.Navigator id="AppStack" screenOptions={{ headerShown: false, animation: 'none' }}>
     {needsVerification ? (
       <Stack.Screen name="Verification" component={VerificationScreen} />
     ) : (

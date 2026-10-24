@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
 import { formatMoney } from '@/utils/helper';
+import { toArabicDigits } from '@/utils/helper';
 
 export default function ShopServices({
   services,
@@ -46,7 +47,7 @@ export default function ShopServices({
             )}
             <Text className="text-primary font-figtree-bold text-sm mt-1">
               {formatMoney(service.price, currency)}{' '}
-              <Text className="text-gray-light font-figtree text-xs">• {service.duration} د</Text>
+              <Text className="text-gray-light font-figtree text-xs">• {toArabicDigits(service.duration)} دقيقة</Text>
             </Text>
           </View>
         </View>

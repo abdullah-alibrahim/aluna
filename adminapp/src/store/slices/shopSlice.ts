@@ -50,7 +50,7 @@ export const fetchAllShops = createAsyncThunk(
       const response = await apiClient.get('/admin/shops');
       return response.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'فشل جلب الصالونات');
+      return rejectWithValue(err.response?.data?.message || 'فشل جلب مراكز التجميل');
     }
   }
 );
@@ -69,7 +69,7 @@ export const updateShopStatus = createAsyncThunk(
       const response = await apiClient.patch(`/admin/shops/${id}/status`, body);
       return response.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'فشل تحديث حالة الصالون');
+      return rejectWithValue(err.response?.data?.message || 'فشل تحديث حالة مركز التجميل');
     }
   }
 );

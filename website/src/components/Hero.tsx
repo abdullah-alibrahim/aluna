@@ -98,7 +98,7 @@ export function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.75, delay: 0.65, ease: [0.22, 1, 0.36, 1] }}
         >
-          الجمال بلمسة هادئة — احجزي صالونك في سوريا من مكان واحد.
+          الجمال بلمسة هادئة — احجزي مركزك في سوريا من مكان واحد.
         </motion.p>
 
         <motion.div

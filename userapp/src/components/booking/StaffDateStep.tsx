@@ -1,8 +1,24 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, TextInput } from 'react-native';
 import { User, CheckCircle2 } from 'lucide-react-native';
-import { Calendar } from 'react-native-calendars';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { t } from '@/i18n';
+
+// Arabic calendar labels (the rest of the app is Arabic)
+LocaleConfig.locales.ar = {
+  monthNames: [
+    'كانون الثاني', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران',
+    'تموز', 'آب', 'أيلول', 'تشرين الأول', 'تشرين الثاني', 'كانون الأول',
+  ],
+  monthNamesShort: [
+    'كانون ٢', 'شباط', 'آذار', 'نيسان', 'أيار', 'حزيران',
+    'تموز', 'آب', 'أيلول', 'تشرين ١', 'تشرين ٢', 'كانون ١',
+  ],
+  dayNames: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
+  dayNamesShort: ['أحد', 'اثن', 'ثلا', 'أرب', 'خمي', 'جمع', 'سبت'],
+  today: 'اليوم',
+};
+LocaleConfig.defaultLocale = 'ar';
 
 interface Staff {
   _id: string;

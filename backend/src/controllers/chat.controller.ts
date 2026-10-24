@@ -5,6 +5,7 @@ import Message from '../models/Message';
 import Shop from '../models/Shop';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { getIO } from '../sockets';
+import { uploadedImageUrl } from '../middlewares/upload';
 
 export const startOrGetConversation = async (req: Request, res: Response) => {
   const shopId = req.params.shopId as string;
@@ -80,7 +81,7 @@ export const sendMessage = async (req: Request, res: Response) => {
   };
 
   if (req.file) {
-    messageData.image = req.file.path; // Cloudinary URL
+    messageData.image = uploadedImageUrl(req.file);
   }
 
   if (!messageData.text && !messageData.image) {
@@ -99,7 +100,7 @@ export const sendMessage = async (req: Request, res: Response) => {
 
   if (recipientId) {
     try {
-      getIO().to(recipientId).emit('newMessage', message);
+      getIO()?.to(recipientId).emit('newMessage', message);
     } catch (error) {
       console.error('Socket.io emit error:', error);
     }

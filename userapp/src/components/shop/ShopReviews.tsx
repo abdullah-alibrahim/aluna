@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Image } from 'react-native';
 import { Star } from 'lucide-react-native';
 import dayjs from 'dayjs';
+import { formatDateAr } from '@/utils/helper';
 import apiClient from '@/api/client';
 import twConfig from '../../../tailwind.config.js';
 
@@ -81,7 +82,7 @@ export default function ShopReviews({ shopId }: { shopId: string }) {
                   {review.userId?.name || 'مستخدمة'}
                 </Text>
                 <Text className="font-figtree-medium text-xs text-gray-medium">
-                  {dayjs(review.createdAt).format('MMMM D, YYYY')}
+                  {formatDateAr(review.createdAt)}
                 </Text>
               </View>
             </View>

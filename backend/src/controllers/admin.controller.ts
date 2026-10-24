@@ -3,6 +3,7 @@ import City from '../models/City';
 import Category from '../models/Category';
 import Shop from '../models/Shop';
 import { NotFoundError, BadRequestError } from '../utils/errors';
+import { cached } from '../utils/cache';
 import PlatformSettings from '../models/PlatformSettings';
 import WithdrawalRequest, { WithdrawalStatus } from '../models/WithdrawalRequest';
 import Payout, { PayoutStatus } from '../models/Payout';
@@ -14,8 +15,11 @@ import TicketMessage from '../models/TicketMessage';
 import Booking from '../models/Booking';
 import Banner from '../models/Banner';
 import FAQ from '../models/FAQ';
+import Branch from '../models/Branch';
+import User, { UserRole } from '../models/User';
 
 import { getIO } from '../sockets';
+import { uploadedImageUrl } from '../middlewares/upload';
 
 // Cities
 export const addCity = async (req: Request, res: Response) => {
@@ -63,7 +67,7 @@ export const addCategory = async (req: Request, res: Response) => {
   const { name, description } = req.body;
   const categoryData: any = { name, description };
   if (req.file) {
-    categoryData.image = req.file.path; // Cloudinary URL
+    categoryData.image = uploadedImageUrl(req.file);
   }
 
   const category = await Category.create(categoryData);
@@ -83,7 +87,7 @@ export const updateCategory = async (req: Request, res: Response) => {
   if (name) category.name = name;
   if (description !== undefined) category.description = description;
   if (req.file) {
-    category.image = req.file.path;
+    category.image = uploadedImageUrl(req.file)!;
   }
 
   await category.save();
@@ -91,7 +95,9 @@ export const updateCategory = async (req: Request, res: Response) => {
 };
 
 export const getCategories = async (req: Request, res: Response) => {
-  const categories = await Category.find({ isActive: true });
+  const categories = await cached('categories:active', 600, async () => {
+    return await Category.find({ isActive: true }).select('name description image isActive').lean();
+  });
   res.json(categories);
 };
 
@@ -122,7 +128,7 @@ export const updateShopStatus = async (req: Request, res: Response) => {
     approvalStatus: status,
   };
   if (status === 'rejected') {
-    update.rejectionReason = rejectionReason || 'تم رفض الصالون من الإدارة';
+    update.rejectionReason = rejectionReason || 'تم رفض مركز التجميل من الإدارة';
   } else {
     update.$unset = { rejectionReason: 1 };
   }
@@ -139,11 +145,11 @@ export const updateShopStatus = async (req: Request, res: Response) => {
   );
 
   if (!shop) {
-    throw new NotFoundError('الصالون غير موجود');
+    throw new NotFoundError('مركز التجميل غير موجود');
   }
 
   const statusAr =
-    status === 'approved' ? 'تمت الموافقة على صالونك' : status === 'rejected' ? 'تم رفض صالونك' : 'صالونك قيد المراجعة';
+    status === 'approved' ? 'تمت الموافقة على مركزك' : status === 'rejected' ? 'تم رفض مركزك' : 'مركزك قيد المراجعة';
   const detail =
     status === 'rejected' && shop.rejectionReason
       ? `: ${shop.rejectionReason}`
@@ -153,7 +159,7 @@ export const updateShopStatus = async (req: Request, res: Response) => {
 
   await sendNotification({
     recipientId: shop.ownerId.toString(),
-    title: 'تحديث حالة الصالون',
+    title: 'تحديث حالة مركز التجميل',
     message: `${statusAr}${detail}`,
     type: NotificationType.BOOKING_UPDATED,
     data: { shopId: shop._id, status, screen: 'MyShops' },
@@ -230,22 +236,29 @@ export const approveWithdrawal = async (req: Request, res: Response) => {
     throw new NotFoundError('Withdrawal request not found');
   }
 
-  if (withdrawal.status !== WithdrawalStatus.PENDING) {
-    throw new BadRequestError(`Cannot change status of a ${withdrawal.status} request`);
+  const prev = withdrawal.status;
+
+  if (status === WithdrawalStatus.COMPLETED) {
+    if (prev !== WithdrawalStatus.PENDING && prev !== WithdrawalStatus.APPROVED) {
+      throw new BadRequestError(`Cannot complete a ${prev} request`);
+    }
+  } else if (prev !== WithdrawalStatus.PENDING) {
+    throw new BadRequestError(`Cannot change status of a ${prev} request`);
   }
 
   withdrawal.status = status;
   if (adminNote) withdrawal.adminNote = adminNote;
 
-  if (status === WithdrawalStatus.APPROVED || status === WithdrawalStatus.COMPLETED) {
-    // Balance is already deducted when request was made. Just update total withdrawn.
+  // Balance already deducted on request. Only bump totalWithdrawn when leaving pending.
+  if (
+    (status === WithdrawalStatus.APPROVED || status === WithdrawalStatus.COMPLETED) &&
+    prev === WithdrawalStatus.PENDING
+  ) {
     const wallet = await Wallet.findOne({ ownerId: withdrawal.ownerId });
     if (!wallet) throw new NotFoundError('Owner wallet not found');
-    
     wallet.totalWithdrawn += withdrawal.amount;
     await wallet.save();
-  } else if (status === WithdrawalStatus.REJECTED) {
-    // Refund the balance back to the owner's wallet
+  } else if (status === WithdrawalStatus.REJECTED && prev === WithdrawalStatus.PENDING) {
     const wallet = await Wallet.findOne({ ownerId: withdrawal.ownerId });
     if (wallet) {
       wallet.balance += withdrawal.amount;
@@ -402,7 +415,7 @@ export const replyToTicket = async (req: Request, res: Response) => {
 
   // Broadcast to ticket room
   try {
-    getIO().to(`ticket_${id}`).emit('newMessage', populatedMessage);
+    getIO()?.to(`ticket_${id}`).emit('newMessage', populatedMessage);
   } catch (error) {
     console.error('Socket error emitting message:', error);
   }
@@ -413,7 +426,7 @@ export const replyToTicket = async (req: Request, res: Response) => {
 // Bookings
 export const getAllBookings = async (req: Request, res: Response) => {
   const bookings = await Booking.find()
-    .populate('userId', 'name email avatar')
+    .populate('userId', 'name email phone avatar')
     .populate('shopId', 'name address')
     .populate('serviceIds', 'name duration price')
     .populate('staffId', 'name')
@@ -431,7 +444,7 @@ export const addBanner = async (req: Request, res: Response) => {
   const { targetLink, isActive } = req.body;
 
   const banner = await Banner.create({
-    imageUrl: req.file.path,
+    imageUrl: uploadedImageUrl(req.file)!,
     targetLink,
     isActive: isActive !== undefined ? isActive : true,
   });
@@ -527,6 +540,39 @@ export const deleteFAQ = async (req: Request, res: Response) => {
   res.status(200).json({ message: 'FAQ removed' });
 };
 
+/** Broadcast system notification (+ push) to users / owners / all */
+export const broadcastNotification = async (req: Request, res: Response) => {
+  const { title, message, audience = 'all' } = req.body as {
+    title?: string;
+    message?: string;
+    audience?: 'all' | 'user' | 'owner';
+  };
+
+  if (!title?.trim() || !message?.trim()) {
+    throw new BadRequestError('العنوان والرسالة مطلوبان');
+  }
+
+  const filter: any = {};
+  if (audience === 'user') filter.role = UserRole.USER;
+  else if (audience === 'owner') filter.role = UserRole.OWNER;
+  else filter.role = { $in: [UserRole.USER, UserRole.OWNER] };
+
+  const recipients = await User.find(filter).select('_id');
+  let sent = 0;
+  for (const u of recipients) {
+    await sendNotification({
+      recipientId: String(u._id),
+      title: title.trim(),
+      message: message.trim(),
+      type: NotificationType.SYSTEM,
+      data: { broadcast: true, audience },
+    });
+    sent += 1;
+  }
+
+  res.status(201).json({ sent, audience });
+};
+
 // Dashboard Stats
 export const getDashboardStats = async (req: Request, res: Response) => {
   const today = new Date();
@@ -565,4 +611,46 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     todayBookings,
     totalOwedBalance,
   });
+};
+
+// Add a center (shop) directly from admin dashboard — auto-approved
+export const addShop = async (req: Request, res: Response) => {
+  const { name, description, address, cityId, categoryIds, longitude, latitude, operatingHours, slotInterval } = req.body;
+
+  const images = req.files ? (req.files as Express.Multer.File[]).map((f) => uploadedImageUrl(f)!).filter(Boolean) : [];
+
+  const shop = await Shop.create({
+    ownerId: req.user!.id,
+    name,
+    description,
+    address,
+    cityId,
+    categoryIds: JSON.parse(categoryIds || '[]'),
+    location: {
+      type: 'Point',
+      coordinates: [Number(longitude), Number(latitude)],
+    },
+    images,
+    slotInterval: slotInterval ? Number(slotInterval) : 15,
+    operatingHours: JSON.parse(operatingHours || '[]'),
+    isApproved: true,
+    approvalStatus: 'approved',
+  });
+
+  try {
+    await Branch.create({
+      shopId: shop._id,
+      name: 'الفرع الرئيسي',
+      address: shop.address,
+      cityId: shop.cityId,
+      location: shop.location,
+      operatingHours: shop.operatingHours || [],
+      isMain: true,
+      isActive: true,
+    });
+  } catch (e) {
+    // non-fatal
+  }
+
+  res.status(201).json(shop);
 };

@@ -9,13 +9,14 @@ import FAQ from '../models/FAQ';
 export const getActiveFAQs = async (req: Request, res: Response) => {
   const target = (req.params.target || req.query.target) as string | undefined;
 
-  let filter: any = { isActive: true };
-  if (target) {
-    filter.target = target;
-  }
-
-  if (filter.target && !['user', 'owner'].includes(filter.target)) {
-    return res.status(400).json({ message: 'Invalid target specified. Use "user" or "owner".' });
+  const filter: any = { isActive: true };
+  if (target === 'user') {
+    // Users see their own FAQs plus the shared "all" ones
+    filter.target = { $in: ['user', 'all'] };
+  } else if (target === 'owner') {
+    filter.target = { $in: ['owner', 'all'] };
+  } else if (target && target !== 'all') {
+    return res.status(400).json({ message: 'Invalid target specified. Use "user", "owner" or "all".' });
   }
 
   const faqs = await FAQ.find(filter).sort({ createdAt: 1 });

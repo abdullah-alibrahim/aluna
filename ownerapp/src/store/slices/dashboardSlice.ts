@@ -54,10 +54,11 @@ export const fetchOwnerShops = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await apiClient.get('/owner/shops');
-      return response.data;
+      const data = response.data;
+      return Array.isArray(data) ? data : data?.shops || data?.data || [];
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || 'فشل جلب صالوناتك'
+        error.response?.data?.message || 'فشل جلب مراكز تجميلك'
       );
     }
   }
@@ -66,13 +67,24 @@ export const fetchOwnerShops = createAsyncThunk(
 export const fetchShopAnalytics = createAsyncThunk(
   'dashboard/fetchShopAnalytics',
   async (shopId: string, { rejectWithValue }) => {
-    try {
+    const fetchAnalytics = async () => {
       const response = await apiClient.get(`/owner/shops/${shopId}/analytics`);
       return response.data;
+    };
+
+    try {
+      return await fetchAnalytics();
     } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || 'فشل جلب تحليلات الصالون'
-      );
+      // The first dashboard request after login can race the Vercel cold start.
+      // Retry once before surfacing an error / leaving the cards at zero.
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        return await fetchAnalytics();
+      } catch (retryError: any) {
+        return rejectWithValue(
+          retryError.response?.data?.message || 'فشل جلب تحليلات مركز التجميل'
+        );
+      }
     }
   }
 );

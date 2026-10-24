@@ -1,5 +1,5 @@
 import React, { Component, useEffect, useState, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, I18nManager } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -19,6 +19,8 @@ import AppNavigator from '@/navigation/AppNavigator';
 import { setLocale } from '@/i18n';
 
 setLocale('ar');
+I18nManager.allowRTL(true);
+if (!I18nManager.isRTL) I18nManager.forceRTL(true);
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -155,3 +157,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+// build marker: local API bundle (1792539233)

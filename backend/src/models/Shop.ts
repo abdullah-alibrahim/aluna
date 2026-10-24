@@ -90,5 +90,9 @@ const ShopSchema: Schema = new Schema(
 );
 
 ShopSchema.index({ location: '2dsphere' });
+ShopSchema.index({ ownerId: 1 });
+ShopSchema.index({ isApproved: 1, isActive: 1 });
+ShopSchema.index({ cityId: 1 });
+ShopSchema.index({ name: 'text' });
 
 export default mongoose.model<IShop>('Shop', ShopSchema);

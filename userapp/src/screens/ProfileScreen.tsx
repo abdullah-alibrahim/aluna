@@ -107,7 +107,7 @@ const ProfileScreen = () => {
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: 190 }}
         className="px-3"
       >
         <View className="py-3 px-2">
@@ -128,7 +128,11 @@ const ProfileScreen = () => {
               </Text>
               <BadgeCheck size={18} color="#B59451" fill="#FFF" />
             </View>
-            <Text className="font-figtree-medium text-gray-medium text-xs" numberOfLines={1}>
+            <Text
+              className="font-figtree-medium text-gray-medium text-xs"
+              numberOfLines={1}
+              style={{ writingDirection: 'ltr', textAlign: 'right' }}
+            >
               {user?.phone || user?.email || ''}
             </Text>
             <View className="mt-2 bg-primary/10 self-start px-2 py-1 rounded-md">

@@ -31,4 +31,8 @@ const ServiceSchema: Schema = new Schema(
   }
 );
 
+ServiceSchema.index({ shopId: 1 });
+ServiceSchema.index({ categoryId: 1 });
+ServiceSchema.index({ shopId: 1, name: 'text' });
+
 export default mongoose.model<IService>('Service', ServiceSchema);

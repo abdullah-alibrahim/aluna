@@ -6,6 +6,7 @@ import { ArrowLeft, Bell, CheckCheck, Store, User, Calendar, CreditCard } from '
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { fetchNotifications, markAsRead, markAllAsRead, Notification } from '@/store/slices/notificationSlice';
 import { exitGuestForAuth } from '@/store/slices/authSlice';
+import { formatDateAr, toArabicDigits } from '@/utils/helper';
 
 const NotificationsScreen = () => {
   const insets = useSafeAreaInsets();
@@ -72,12 +73,12 @@ const NotificationsScreen = () => {
     
     if (seconds < 60) return 'الآن';
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `منذ ${minutes} د`;
+    if (minutes < 60) return `منذ ${toArabicDigits(minutes)} د`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `منذ ${hours} س`;
+    if (hours < 24) return `منذ ${toArabicDigits(hours)} س`;
     const days = Math.floor(hours / 24);
-    if (days < 7) return `منذ ${days} ي`;
-    return date.toLocaleDateString('ar-SY');
+    if (days < 7) return `منذ ${toArabicDigits(days)} ي`;
+    return formatDateAr(date);
   };
 
   return (

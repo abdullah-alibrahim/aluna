@@ -92,12 +92,12 @@ const BrandSplash: React.FC<BrandSplashProps> = ({
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
-    transform: [{ scale: logoScale.value }, { translateY: logoY.value }],
+    transform: [{ scale: logoScale.value }, { translateY: logoY.value }] as any,
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glow.value,
-    transform: [{ scale: ring.value }],
+    transform: [{ scale: ring.value }] as any,
   }));
 
   const lineStyle = useAnimatedStyle(() => ({
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill as any,
     backgroundColor: '#FBF6EC',
     opacity: 0.65,
   },

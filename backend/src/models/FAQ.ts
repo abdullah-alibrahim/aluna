@@ -21,7 +21,7 @@ const faqSchema = new Schema<IFAQ>({
   },
   target: {
     type: String,
-    enum: ['user', 'owner'],
+    enum: ['user', 'owner', 'all'],
     required: [true, 'Please specify if this FAQ is for users or owners'],
   },
   isActive: {

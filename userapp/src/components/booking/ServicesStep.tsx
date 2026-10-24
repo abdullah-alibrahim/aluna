@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatMoney } from '@/utils/helper';
 import { ScrollView, TouchableOpacity, View, Text, Image } from 'react-native';
 import { CheckCircle2 } from 'lucide-react-native';
 import { t } from '@/i18n';
@@ -46,7 +47,7 @@ export default function ServicesStep({
             <Text className="font-figtree-medium text-xs text-gray-dark">{service.duration} {t('common.minutes')}</Text>
           </View>
           <View className="items-end justify-center">
-            <Text className="font-figtree-bold text-lg text-primary">{currency}{service.price}</Text>
+            <Text className="font-figtree-bold text-lg text-primary">{formatMoney(service.price, currency)}</Text>
             <View
               className={`w-6 h-6 rounded-full mt-2 items-center justify-center border ${
                 selectedServiceIds.includes(service._id) ? 'bg-primary border-primary' : 'border-gray-lighter'

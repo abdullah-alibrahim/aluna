@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { formatDateAr } from '@/utils/helper';
 import {
   View,
   Text,
@@ -203,7 +204,7 @@ export default function ManageCouponsScreen() {
           </View>
           <View className="w-1/2 gap-1 mb-2 flex-row items-center">
             <Calendar size={14} color={colors['gray-medium']} className="mr-1.5" />
-            <Text className="font-figtree-medium text-sm text-black-main">{t('coupons.ends')} {dayjs(item.expiryDate).format('MMM D, YY')}</Text>
+            <Text className="font-figtree-medium text-sm text-black-main">{t('coupons.ends')} {formatDateAr(item.expiryDate)}</Text>
           </View>
           <View className="w-1/2 gap-1 flex-row items-center">
             <Hash size={14} color={colors['gray-medium']} className="mr-1.5" />

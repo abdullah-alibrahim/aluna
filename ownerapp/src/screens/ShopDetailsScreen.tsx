@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDateAr, formatTimeAr } from '@/utils/helper';
 import { 
   View, 
   Text, 
@@ -166,7 +167,7 @@ const ShopDetailsScreen = () => {
             )}
             
             <View className="flex-1">
-              <Text className="text-gray-medium font-figtree-regular text-xs uppercase tracking-wider">تفاصيل الصالون</Text>
+              <Text className="text-gray-medium font-figtree-regular text-xs uppercase tracking-wider">تفاصيل المركز</Text>
               <Text className="text-black-main font-figtree-bold text-lg" numberOfLines={1}>
                 {shop.name}
               </Text>
@@ -182,7 +183,7 @@ const ShopDetailsScreen = () => {
               <View className="flex-1">
                 <Text className="font-figtree-bold text-sm text-error mb-1">مرفوض</Text>
                 <Text className="font-figtree-medium text-xs text-error/80 leading-4 mb-2">
-                  {shop.rejectionReason || 'تم رفض الصالون من الإدارة. عدّلي البيانات وأعيدي الإرسال للمراجعة.'}
+                  {shop.rejectionReason || 'تم رفض مركز التجميل من الإدارة. عدّلي البيانات وأعيدي الإرسال للمراجعة.'}
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('EditShop', { shop })}
@@ -200,7 +201,7 @@ const ShopDetailsScreen = () => {
               <View className="flex-1">
                 <Text className="font-figtree-bold text-sm text-warning mb-1">بانتظار الموافقة</Text>
                 <Text className="font-figtree-medium text-xs text-warning/80 leading-4">
-                  هذا الصالون قيد المراجعة من الإدارة. الإجراءات محدودة حتى تتم الموافقة.
+                  هذا المركز قيد المراجعة من الإدارة. الإجراءات محدودة حتى تتم الموافقة.
                 </Text>
               </View>
             </View>
@@ -272,7 +273,7 @@ const ShopDetailsScreen = () => {
         {/* Description Section */}
         {shop.description && (
           <View className="px-3 mb-3">
-            <Text className="px-1 font-figtree-bold text-lg text-black-main mb-3">عن الصالون</Text>
+            <Text className="px-1 font-figtree-bold text-lg text-black-main mb-3">عن مركز التجميل</Text>
             <View className="bg-white p-4 rounded-3xl border border-gray-lighter shadow-sm shadow-black/5">
               <Text className="font-figtree-regular text-sm text-gray-dark leading-6">
                 {shop.description}
@@ -304,10 +305,10 @@ const ShopDetailsScreen = () => {
             <View className="flex-1">
               <Text className="font-figtree-bold text-[10px] text-gray-medium uppercase tracking-wider mb-0.5">تاريخ الانضمام</Text>
               <Text className="font-figtree-bold text-sm text-black-main">
-                {dayjs(shop.createdAt).format('MMMM D, YYYY')}
+                {formatDateAr(shop.createdAt)}
               </Text>
               <Text className="font-figtree-medium text-xs text-gray-dark mt-0.5">
-                {dayjs(shop.createdAt).format('h:mm A')}
+                {formatTimeAr(dayjs(shop.createdAt).format('HH:mm'))}
               </Text>
             </View>
           </View>

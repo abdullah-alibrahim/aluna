@@ -30,9 +30,9 @@ export const sendNotification = async ({
       data,
     });
 
-    // 2. Emit via Socket.io if the user is online
+    // 2. Emit via Socket.io if the user is online (skipped on serverless)
     const io = getIO();
-    io.to(recipientId).emit('notification', notification);
+    io?.to(recipientId).emit('notification', notification);
 
     // 3. Send Expo Push Notification
     const user = await User.findById(recipientId);

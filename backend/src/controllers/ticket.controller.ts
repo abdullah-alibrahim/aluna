@@ -67,7 +67,7 @@ export const sendTicketMessage = async (req: Request, res: Response) => {
   const populatedMessage = await message.populate('senderId', 'name email avatar');
 
   try {
-    getIO().to(`ticket_${id}`).emit('newMessage', populatedMessage);
+    getIO()?.to(`ticket_${id}`).emit('newMessage', populatedMessage);
   } catch (err) {
     console.error('Socket error emitting message:', err);
   }

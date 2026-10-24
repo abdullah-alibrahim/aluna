@@ -54,4 +54,7 @@ const StaffSchema: Schema = new Schema(
   }
 );
 
+StaffSchema.index({ shopId: 1 });
+StaffSchema.index({ shopId: 1, isActive: 1 });
+
 export default mongoose.model<IStaff>('Staff', StaffSchema);

@@ -81,7 +81,7 @@ export default function SearchOverlay({ visible, onClose, cityId }: SearchOverla
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="ابحثي عن صالون أو متخصصة"
+                placeholder="ابحثي عن مركز تجميل أو متخصصة"
                 placeholderTextColor="#9C8C80"
                 className="flex-1 ml-2 text-black-main font-figtree text-base p-0"
                 autoFocus={true}

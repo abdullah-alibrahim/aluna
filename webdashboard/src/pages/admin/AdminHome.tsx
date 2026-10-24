@@ -37,31 +37,63 @@ export default function AdminHome() {
       <PageHeader title="داشبورد الأدمن" subtitle="إدارة المنصة · موافقات · سحوبات · دعم" />
       <ErrorBanner message={error} />
 
-      <div className="grid">
-        <StatCard label="صالونات معلّقة" value={stats?.pendingShops ?? 0} />
-        <StatCard label="تذاكر مفتوحة" value={stats?.openTickets ?? 0} />
-        <StatCard label="سحوبات معلّقة" value={stats?.pendingWithdrawals ?? 0} />
-        <StatCard label="حجوزات اليوم" value={stats?.todayBookings ?? 0} />
-        <StatCard label="صالونات معتمدة" value={stats?.approvedShops ?? 0} hint={`من أصل ${stats?.totalShops ?? 0}`} />
-        <StatCard label="مستحقات الصالونات" value={money(stats?.totalOwedBalance)} />
+      <div className="grid cols-3">
+        <StatCard icon="⏳" label="مراكز معلّقة" value={stats?.pendingShops ?? 0} />
+        <StatCard icon="🎫" label="تذاكر مفتوحة" value={stats?.openTickets ?? 0} />
+        <StatCard icon="↗" label="سحوبات معلّقة" value={stats?.pendingWithdrawals ?? 0} />
+        <StatCard icon="📅" label="حجوزات اليوم" value={stats?.todayBookings ?? 0} />
+        <StatCard icon="✅" label="مراكز معتمدة" value={stats?.approvedShops ?? 0} hint={`من أصل ${stats?.totalShops ?? 0}`} />
+        <StatCard icon="💳" label="مستحقات المراكز" value={money(stats?.totalOwedBalance)} />
       </div>
 
       <div className="quick-links">
         <Link to="/admin/shops" className="quick-link">
-          <strong>الصالونات</strong>
+          <strong>🏪 مراكز التجميل</strong>
           <span className="muted">موافقة ورفض وتثبيت</span>
         </Link>
+        <Link to="/admin/finances" className="quick-link">
+          <strong>💵 المالية</strong>
+          <span className="muted">مستحقات ودفعات</span>
+        </Link>
         <Link to="/admin/withdrawals" className="quick-link">
-          <strong>السحوبات</strong>
+          <strong>↗ السحوبات</strong>
           <span className="muted">مراجعة طلبات الدفع</span>
         </Link>
         <Link to="/admin/bookings" className="quick-link">
-          <strong>الحجوزات</strong>
+          <strong>📅 الحجوزات</strong>
           <span className="muted">متابعة نشاط المنصة</span>
         </Link>
         <Link to="/admin/tickets" className="quick-link">
-          <strong>التذاكر</strong>
+          <strong>🎫 التذاكر</strong>
           <span className="muted">دعم المستخدمين</span>
+        </Link>
+        <Link to="/admin/cities" className="quick-link">
+          <strong>📍 المدن</strong>
+          <span className="muted">تغطية المنصة</span>
+        </Link>
+        <Link to="/admin/categories" className="quick-link">
+          <strong>🧾 التصنيفات</strong>
+          <span className="muted">خدمات التطبيق</span>
+        </Link>
+        <Link to="/admin/banners" className="quick-link">
+          <strong>🖼 البانرات</strong>
+          <span className="muted">ترويج الصفحة الرئيسية</span>
+        </Link>
+        <Link to="/admin/faqs" className="quick-link">
+          <strong>❓ الأسئلة الشائعة</strong>
+          <span className="muted">محتوى المساعدة</span>
+        </Link>
+        <Link to="/admin/settings" className="quick-link">
+          <strong>⚙️ الإعدادات</strong>
+          <span className="muted">عمولة وسياسات</span>
+        </Link>
+        <Link to="/admin/notifications" className="quick-link">
+          <strong>🔔 الإشعارات</strong>
+          <span className="muted">تنبيهات الحساب</span>
+        </Link>
+        <Link to="/admin/profile" className="quick-link">
+          <strong>👤 الملف الشخصي</strong>
+          <span className="muted">الحساب وكلمة المرور</span>
         </Link>
       </div>
 
@@ -125,7 +157,7 @@ export default function AdminHome() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>الصالون</th>
+                  <th>مركز التجميل</th>
                   <th>الزبون</th>
                   <th>الوقت</th>
                   <th>الحالة</th>
@@ -135,17 +167,17 @@ export default function AdminHome() {
               <tbody>
                 {bookings.map((b) => (
                   <tr key={b._id}>
-                    <td>{b.shopId?.name || '—'}</td>
-                    <td>{b.userId?.name || '—'}</td>
-                    <td>
+                    <td data-label="المركز">{b.shopId?.name || '—'}</td>
+                    <td data-label="الزبون">{b.userId?.name || '—'}</td>
+                    <td data-label="الوقت">
                       {formatDate(b.date)} {b.startTime || ''}
                     </td>
-                    <td>
+                    <td data-label="الحالة">
                       <Badge tone={badgeTone('booking', b.status)}>
                         {bookingStatusAr[b.status] || b.status}
                       </Badge>
                     </td>
-                    <td>{money(b.totalPrice)}</td>
+                    <td data-label="المبلغ" className="money">{money(b.totalPrice)}</td>
                   </tr>
                 ))}
               </tbody>

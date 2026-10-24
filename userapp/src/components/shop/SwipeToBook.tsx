@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, Dimensions, StyleSheet, I18nManager } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -24,10 +24,14 @@ interface SwipeToBookProps {
 
 export default function SwipeToBook({ onBook, price }: SwipeToBookProps) {
   const translateX = useSharedValue(0);
+  // In RTL the slider is pinned to the right edge, so the user drags leftwards:
+  // physical translationX is negative and the visual offset must be negated too.
+  const isRTL = I18nManager.isRTL;
 
   const pan = Gesture.Pan()
     .onUpdate((event) => {
-      translateX.value = Math.max(0, Math.min(event.translationX, MAX_TRANSLATE));
+      const dx = isRTL ? -event.translationX : event.translationX;
+      translateX.value = Math.max(0, Math.min(dx, MAX_TRANSLATE));
     })
     .onEnd(() => {
       if (translateX.value > MAX_TRANSLATE * 0.75) {
@@ -42,7 +46,7 @@ export default function SwipeToBook({ onBook, price }: SwipeToBookProps) {
 
   const animatedSliderStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateX: translateX.value }],
+      transform: [{ translateX: (isRTL ? -1 : 1) * translateX.value }],
     };
   });
 

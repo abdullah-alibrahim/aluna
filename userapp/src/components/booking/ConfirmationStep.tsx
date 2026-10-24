@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
 import { MapPin, CalendarDays, User, Ticket, Percent, X, Banknote } from 'lucide-react-native';
-import { formatTime12h, formatMoney } from '@/utils/helper';
+import { formatTimeAr, formatMoney, formatWeekdayDateAr } from '@/utils/helper';
 import { Coupon } from '@/store/slices/couponSlice';
 import { t } from '@/i18n';
 
@@ -73,9 +73,9 @@ export default function ConfirmationStep({
             <View className="flex-1">
               <Text className="font-figtree-medium text-xs text-gray-medium uppercase tracking-wider mb-1">{t('booking.dateTime')}</Text>
               <Text className="font-figtree-bold text-base text-black-main">
-                {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                {formatWeekdayDateAr(selectedDate)}
               </Text>
-              <Text className="font-figtree-medium text-primary text-sm mt-1">{selectedSlot ? formatTime12h(selectedSlot.time) : ''}</Text>
+              <Text className="font-figtree-medium text-primary text-sm mt-1">{selectedSlot ? formatTimeAr(selectedSlot.time) : ''}</Text>
             </View>
           </View>
 
@@ -209,7 +209,7 @@ export default function ConfirmationStep({
                 <Banknote color={colors.primary} size={20} />
               </View>
               <View>
-                <Text className="font-figtree-bold text-base text-primary">دفع نقدي في الصالون</Text>
+                <Text className="font-figtree-bold text-base text-primary">دفع نقدي في المركز</Text>
                 <Text className="font-figtree-medium text-xs text-gray-medium">كاش عند الحضور — الطريقة الوحيدة حالياً</Text>
               </View>
             </View>

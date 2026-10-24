@@ -21,6 +21,7 @@ interface ServiceState {
   error: string | null;
   actionError: string | null;
   success: boolean;
+  hasMore: boolean;
 }
 
 const initialState: ServiceState = {
@@ -30,14 +31,17 @@ const initialState: ServiceState = {
   error: null,
   actionError: null,
   success: false,
+  hasMore: true,
 };
 
 export const fetchServices = createAsyncThunk(
   'services/fetchAll',
-  async (shopId: string, { rejectWithValue }) => {
+  async ({ shopId, limit = 20, skip = 0 }: { shopId: string; limit?: number; skip?: number }, { rejectWithValue }) => {
     try {
-      const response = await apiClient.get(`/owner/shops/${shopId}/services`);
-      return response.data;
+      const response = await apiClient.get(`/owner/shops/${shopId}/services`, {
+        params: { limit, skip },
+      });
+      return { data: response.data, skip };
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'فشل جلب الخدمات');
     }
@@ -93,6 +97,11 @@ const serviceSlice = createSlice({
       state.actionError = null;
       state.success = false;
     },
+    resetServices: (state) => {
+      state.services = [];
+      state.hasMore = true;
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -103,7 +112,13 @@ const serviceSlice = createSlice({
       })
       .addCase(fetchServices.fulfilled, (state, action) => {
         state.loading = false;
-        state.services = action.payload;
+        const { data, skip } = action.payload as any;
+        if (skip === 0) {
+          state.services = data;
+        } else {
+          state.services = [...state.services, ...data];
+        }
+        state.hasMore = data.length > 0;
       })
       .addCase(fetchServices.rejected, (state, action) => {
         state.loading = false;
@@ -158,5 +173,5 @@ const serviceSlice = createSlice({
   },
 });
 
-export const { clearServiceState } = serviceSlice.actions;
+export const { clearServiceState, resetServices } = serviceSlice.actions;
 export default serviceSlice.reducer;

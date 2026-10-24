@@ -92,7 +92,7 @@ export const getShopDetailsForBooking = createAsyncThunk(
     } catch (err: any) {
       const { getStoreDemoShopDetails, isStoreDemoMode } = await import('../storeDemoData');
       if (isStoreDemoMode()) return getStoreDemoShopDetails(shopId);
-      return rejectWithValue(err.response?.data?.message || 'فشل تحميل تفاصيل الصالون.');
+      return rejectWithValue(err.response?.data?.message || 'فشل تحميل تفاصيل المركز.');
     }
   }
 );

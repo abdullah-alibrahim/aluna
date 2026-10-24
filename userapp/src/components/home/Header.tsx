@@ -20,8 +20,9 @@ export default function Header({ user, unreadCount = 0, selectedCity, onLocation
     <View className="flex-row items-center justify-between px-3 py-4">
       <View className="flex-row items-center">
         <Image
-          source={{ uri: user?.avatar || 'https://i.pravatar.cc/150?img=11' }}
-          className="w-12 h-12 rounded-full mr-3 border border-gray-lighter"
+          source={require('../../../assets/logo.png')}
+          className="w-12 h-12 rounded-full mr-3 border border-gray-lighter bg-white"
+          resizeMode="contain"
         />
         <View>
           <Text className="text-gray-medium font-figtree text-xs mb-0.5">الموقع</Text>

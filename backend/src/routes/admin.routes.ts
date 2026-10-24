@@ -1,3 +1,4 @@
+import { updateBookingStatus } from '../controllers/owner.controller';
 import express from 'express';
 import {
   addCity,
@@ -8,6 +9,7 @@ import {
   getCategories,
   getPendingShops,
   getAllShops,
+  addShop,
   updateShopStatus,
   getSettings,
   updateSettings,
@@ -27,6 +29,7 @@ import {
   toggleBannerStatus,
   deleteBanner,
   getDashboardStats,
+  broadcastNotification,
   addFAQ,
   getFAQs,
   updateFAQ,
@@ -44,6 +47,7 @@ const router = express.Router();
 router.use(protect, authorize(UserRole.ADMIN));
 
 router.get('/dashboard-stats', catchAsync(getDashboardStats));
+router.post('/notifications/broadcast', catchAsync(broadcastNotification));
 
 router.route('/cities')
   .post(catchAsync(addCity))
@@ -57,7 +61,9 @@ router.route('/categories')
 
 router.put('/categories/:id', upload.single('image'), catchAsync(updateCategory));
 
-router.get('/shops', catchAsync(getAllShops));
+router.route('/shops')
+  .get(catchAsync(getAllShops))
+  .post(upload.array('images', 5), catchAsync(addShop));
 router.get('/shops/pending', catchAsync(getPendingShops));
 router.patch('/shops/:id/status', catchAsync(updateShopStatus));
 router.patch('/shops/:id/featured', catchAsync(toggleShopFeatured));
@@ -87,6 +93,7 @@ router.post('/tickets/:id/messages', catchAsync(replyToTicket));
 
 // Bookings
 router.get('/bookings', catchAsync(getAllBookings));
+router.patch('/bookings/:id/status', catchAsync(updateBookingStatus));
 
 // Banners
 router.route('/banners')

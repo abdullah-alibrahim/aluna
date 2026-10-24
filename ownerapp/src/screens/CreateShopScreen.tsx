@@ -474,7 +474,7 @@ export default function CreateShopScreen({ navigation }: RootStackScreenProps<'C
               className="border-2 border-dashed border-gray-medium bg-background rounded-3xl p-8 items-center justify-center"
             >
               <ImagePlus size={32} color="#9CA3AF" className="mb-2" />
-              <Text className="text-gray-dark font-figtree-medium text-center">اضغطي لرفع حتى 5 صور للصالون.</Text>
+              <Text className="text-gray-dark font-figtree-medium text-center">اضغطي لرفع حتى 5 صور لمركز التجميل.</Text>
             </TouchableOpacity>
           )}
         </View>

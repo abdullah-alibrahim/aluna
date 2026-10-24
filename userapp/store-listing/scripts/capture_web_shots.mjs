@@ -72,7 +72,7 @@ async function runDevice(deviceName, outPlatform) {
   await clickText(page, 'الرئيسية');
   await page.waitForTimeout(800);
   // tap a shop name from demo
-  const opened = await clickText(page, 'صالون لمسة ذهب');
+  const opened = await clickText(page, 'مركز لمسة ذهب');
   if (opened) {
     await page.waitForTimeout(1200);
     await shot(page, '03-shop');

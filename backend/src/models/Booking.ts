@@ -43,6 +43,14 @@ export interface IBooking extends Document {
   /** Fee applied on late cancel or no-show */
   feeCharged: number;
   feeType: 'none' | 'cancellation' | 'no_show';
+  /** True once the owner wallet has been credited for this completed booking */
+  ownerCredited: boolean;
+  /** Net amount (after platform commission) credited to the owner */
+  ownerEarnings: number;
+  // Reminder tracking
+  reminder24hSent: boolean;
+  reminder2hSent: boolean;
+  reminder15mSent: boolean;
   createdAt: Date;
   updatedAt: Date;
   wasNew?: boolean;
@@ -94,6 +102,11 @@ const BookingSchema: Schema = new Schema(
       enum: ['none', 'cancellation', 'no_show'],
       default: 'none',
     },
+    ownerCredited: { type: Boolean, default: false },
+    ownerEarnings: { type: Number, default: 0, min: 0 },
+    reminder24hSent: { type: Boolean, default: false },
+    reminder2hSent: { type: Boolean, default: false },
+    reminder15mSent: { type: Boolean, default: false },
   },
   {
     timestamps: true,
@@ -101,6 +114,10 @@ const BookingSchema: Schema = new Schema(
 );
 
 BookingSchema.index({ shopId: 1, date: 1, status: 1 });
+BookingSchema.index({ userId: 1, status: 1 });
+BookingSchema.index({ shopId: 1, status: 1, createdAt: -1 });
+BookingSchema.index({ status: 1, createdAt: -1 });
+BookingSchema.index({ staffId: 1, date: 1, status: 1 });
 
 // Let's implement the pre/post save logic properly.
 BookingSchema.pre('save', function (this: any) {

@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api, money } from '../../lib/api';
 import { badgeTone, bookingStatusAr, formatDate, shopStatusAr } from '../../lib/labels';
-import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard } from '../../components/ui';
+import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard, CardHeader } from '../../components/ui';
+
+async function soft<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn();
+  } catch {
+    return fallback;
+  }
+}
 
 export default function OwnerShopHome() {
   const { shopId } = useParams();
+  const navigate = useNavigate();
   const [shop, setShop] = useState<any>(null);
   const [analytics, setAnalytics] = useState<any>(null);
   const [pos, setPos] = useState<any>(null);
@@ -16,27 +25,48 @@ export default function OwnerShopHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!shopId) return;
-    setLoading(true);
-    Promise.all([
-      api('/owner/shops'),
-      api(`/owner/shops/${shopId}/analytics`),
-      api(`/owner/shops/${shopId}/pos/summary`),
-      api(`/owner/shops/${shopId}/bookings`),
-      api(`/owner/shops/${shopId}/staff`),
-      api(`/owner/shops/${shopId}/branches`),
-    ])
-      .then(([shops, a, p, b, st, br]) => {
-        setShop((shops || []).find((s: any) => s._id === shopId) || null);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const shops = await api('/owner/shops');
+        if (cancelled) return;
+        const found = (shops || []).find((s: any) => s._id === shopId) || shops?.[0] || null;
+        if (!found) {
+          setShop(null);
+          setError('ما في مركز مرتبط بالحساب');
+          return;
+        }
+        if (shopId && found._id !== shopId) {
+          navigate(`/owner/shops/${found._id}`, { replace: true });
+          return;
+        }
+        setShop(found);
+        const id = found._id;
+        const [a, p, b, st, br] = await Promise.all([
+          soft(() => api(`/owner/shops/${id}/analytics`), null),
+          soft(() => api(`/owner/shops/${id}/pos/summary`), null),
+          soft(() => api(`/owner/shops/${id}/bookings`), []),
+          soft(() => api(`/owner/shops/${id}/staff`), []),
+          soft(() => api(`/owner/shops/${id}/branches`), []),
+        ]);
+        if (cancelled) return;
         setAnalytics(a);
         setPos(p);
         setBookings(b || []);
         setStaff(st || []);
         setBranches(br || []);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [shopId]);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message === 'Not authorized' ? 'انتهت الجلسة أو تغيّرت البيئة — أعيدي تسجيل الدخول' : e.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [shopId, navigate]);
 
   const todayBookings = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -67,39 +97,60 @@ export default function OwnerShopHome() {
       />
       <ErrorBanner message={error} />
 
-      <div className="grid">
-        <StatCard label="إيراد 30 يوم" value={money(analytics?.monthlyRevenue)} />
-        <StatCard label="حجوزات قادمة" value={analytics?.upcomingAppointments ?? 0} />
-        <StatCard label="حجوزات اليوم" value={todayBookings.length} />
-        <StatCard label="مبيعات اليوم (POS)" value={money(pos?.sales)} />
-        <StatCard label="صافي اليوم" value={money(pos?.net)} />
+      <div className="grid cols-3">
+        <StatCard icon="💵" label="إيراد 30 يوم" value={money(analytics?.monthlyRevenue)} />
+        <StatCard icon="📅" label="حجوزات قادمة" value={analytics?.upcomingAppointments ?? 0} />
+        <StatCard icon="☀️" label="حجوزات اليوم" value={todayBookings.length} />
+        <StatCard icon="🧾" label="مبيعات اليوم (POS)" value={money(pos?.sales)} />
+        <StatCard icon="💰" label="صافي اليوم" value={money(pos?.net)} />
         <StatCard
+          icon="🚫"
           label="نسبة الإلغاء"
-          value={`${analytics?.cancellationRate ?? 0}%`}
+          value={`${Number(analytics?.cancellationRate ?? 0).toLocaleString('ar-SY')}%`}
           hint="آخر 30 يوم"
         />
       </div>
 
       <div className="quick-links">
         <Link to={`/owner/shops/${shopId}/bookings`} className="quick-link">
-          <strong>الحجوزات</strong>
+          <strong>📅 الحجوزات</strong>
           <span className="muted">{bookings.length} إجمالي · تأكيد وإكمال</span>
         </Link>
-        <Link to={`/owner/shops/${shopId}/pos`} className="quick-link">
-          <strong>نقطة البيع</strong>
-          <span className="muted">فواتير ومصاريف نقدية</span>
+        <Link to={`/owner/shops/${shopId}/services`} className="quick-link">
+          <strong>✂ الخدمات</strong>
+          <span className="muted">أسعار · مدد · صور</span>
+        </Link>
+        <Link to={`/owner/shops/${shopId}/staff`} className="quick-link">
+          <strong>👥 الموظفون</strong>
+          <span className="muted">{staff.length} موظف · صور</span>
         </Link>
         <Link to={`/owner/shops/${shopId}/branches`} className="quick-link">
-          <strong>الفروع</strong>
-          <span className="muted">{branches.length} فرع · {staff.length} موظف</span>
+          <strong>📍 الفروع</strong>
+          <span className="muted">{branches.length} فرع</span>
+        </Link>
+        <Link to={`/owner/shops/${shopId}/coupons`} className="quick-link">
+          <strong>🎟 الكوبونات</strong>
+          <span className="muted">خصومات الزبائن</span>
+        </Link>
+        <Link to={`/owner/shops/${shopId}/pos`} className="quick-link">
+          <strong>🧾 نقطة البيع</strong>
+          <span className="muted">فواتير ومصاريف نقدية</span>
+        </Link>
+        <Link to={`/owner/shops/${shopId}/edit`} className="quick-link">
+          <strong>⚙️ تعديل المركز</strong>
+          <span className="muted">لوغو · ساعات · موقع</span>
+        </Link>
+        <Link to={`/owner/shops/${shopId}/portfolio`} className="quick-link">
+          <strong>🖼 معرض الأعمال</strong>
+          <span className="muted">صور الأعمال</span>
         </Link>
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
         <div className="card stack">
-          <strong>أبرز الخدمات</strong>
+          <CardHeader title="أبرز الخدمات" />
           {!analytics?.topServices?.length ? (
-            <EmptyState title="ما في بيانات بعد" hint="تظهر بعد اكتمال حجوزات" />
+            <EmptyState title="ما في بيانات بعد" hint="تظهر بعد اكتمال حجوزات" icon="✂" />
           ) : (
             analytics.topServices.map((s: any) => (
               <div key={s._id} className="row" style={{ justifyContent: 'space-between' }}>
@@ -111,7 +162,7 @@ export default function OwnerShopHome() {
         </div>
 
         <div className="card stack">
-          <strong>الفروع والموظفين</strong>
+          <CardHeader title="الفروع والموظفين" />
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="muted">الفروع النشطة</span>
             <strong>{branches.filter((b) => b.isActive !== false).length}</strong>
@@ -133,14 +184,16 @@ export default function OwnerShopHome() {
       </div>
 
       <div className="card stack">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <strong>حجوزات تحتاج متابعة</strong>
-          <Link to={`/owner/shops/${shopId}/bookings`} className="muted small">
-            عرض الكل
-          </Link>
-        </div>
+        <CardHeader
+          title="حجوزات تحتاج متابعة"
+          extra={
+            <Link to={`/owner/shops/${shopId}/bookings`} className="muted small">
+              عرض الكل
+            </Link>
+          }
+        />
         {upcoming.length === 0 ? (
-          <EmptyState title="لا حجوزات معلّقة" />
+          <EmptyState title="لا حجوزات معلّقة" hint="كل الحجوزات مؤكدة أو مكتملة" icon="✅" />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -167,7 +220,7 @@ export default function OwnerShopHome() {
                         {bookingStatusAr[b.status] || b.status}
                       </Badge>
                     </td>
-                    <td>{money(b.totalPrice)}</td>
+                    <td className="money">{money(b.totalPrice)}</td>
                   </tr>
                 ))}
               </tbody>

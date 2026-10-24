@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'https://aluna-api-flax.vercel.app';
 
 class SocketService {
   private socket: Socket | null = null;

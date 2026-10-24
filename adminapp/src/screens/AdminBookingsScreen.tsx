@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
   Modal,
   ScrollView,
-  Platform
+  Platform,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -27,7 +28,7 @@ import { fetchAllBookings, Booking } from '@/store/slices/bookingSlice';
 import { fetchSettings } from '@/store/slices/settingSlice';
 import dayjs from 'dayjs';
 import { bookingStatusLabel, paymentMethodLabel, paymentStatusLabel, t } from '@/i18n';
-import { formatMoney } from '@/utils/helper';
+import { formatMoney, formatDateAr, formatTimeRange } from '@/utils/helper';
 import twConfig from '../../tailwind.config.js';
 
 const colors = twConfig.theme.extend.colors;
@@ -42,6 +43,7 @@ const AdminBookingsScreen = () => {
   const currency = settings?.currency || 'ل.س';
 
   const [activeTab, setActiveTab] = useState('upcoming');
+  const [search, setSearch] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   useEffect(() => {
@@ -54,16 +56,15 @@ const AdminBookingsScreen = () => {
   const filteredBookings = bookings.filter(b => {
     const bookingDate = dayjs(`${dayjs(b.date).format('YYYY-MM-DD')}T${b.startTime}`);
     
-    if (activeTab === 'upcoming') {
-      return (b.status === 'pending' || b.status === 'confirmed') && bookingDate.isAfter(now);
-    }
-    if (activeTab === 'completed') {
-      return b.status === 'completed' || bookingDate.isBefore(now);
-    }
-    if (activeTab === 'cancelled') {
-      return b.status === 'cancelled';
-    }
-    return true;
+    const matchesTab = activeTab === 'upcoming'
+      ? (b.status === 'pending' || b.status === 'confirmed') && bookingDate.isAfter(now)
+      : activeTab === 'completed'
+        ? b.status === 'completed' || bookingDate.isBefore(now)
+        : activeTab === 'cancelled' ? b.status === 'cancelled' : true;
+    const query = search.trim().toLocaleLowerCase();
+    const matchesSearch = !query || [b.userId?.name, b.shopId?.name, b.staffId?.name]
+      .some(value => value?.toLocaleLowerCase().includes(query));
+    return matchesTab && matchesSearch;
   });
 
   const getStatusColor = (status: string) => {
@@ -88,10 +89,10 @@ const AdminBookingsScreen = () => {
           </View>
           <View>
             <Text className="font-figtree-bold text-base text-black-main">
-              {dayjs(item.date).format('MMM D, YYYY')}
+              {formatDateAr(item.date)}
             </Text>
             <Text className="font-figtree-medium text-xs text-primary">
-              {item.startTime} - {item.endTime}
+              {formatTimeRange(item.startTime, item.endTime)}
             </Text>
           </View>
         </View>
@@ -151,6 +152,18 @@ const AdminBookingsScreen = () => {
             </TouchableOpacity>
           ))}
         </View>
+      </View>
+
+      <View className="px-4 pb-2">
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="ابحث باسم العميل أو المركز أو الموظف"
+          accessibilityLabel="البحث في الحجوزات"
+          textAlign="right"
+          returnKeyType="search"
+          className="rounded-2xl border border-gray-lighter bg-white px-4 py-3 font-figtree-medium text-sm text-black-main"
+        />
       </View>
 
       {/* List */}
@@ -216,10 +229,10 @@ const AdminBookingsScreen = () => {
                   <View className="flex-1 bg-white p-4 rounded-3xl mr-2 border border-gray-lighter shadow-sm shadow-black/5">
                     <Text className="font-figtree-regular text-xs text-gray-medium mb-1">التاريخ والوقت</Text>
                     <Text className="font-figtree-bold text-sm text-black-main mb-1">
-                      {dayjs(selectedBooking.date).format('MMM D, YYYY')}
+                      {formatDateAr(selectedBooking.date)}
                     </Text>
                     <Text className="font-figtree-semibold text-primary text-xs">
-                      {selectedBooking.startTime} - {selectedBooking.endTime}
+                      {formatTimeRange(selectedBooking.startTime, selectedBooking.endTime)}
                     </Text>
                   </View>
                   <View className="flex-1 bg-white p-4 rounded-3xl ml-2 border border-gray-lighter shadow-sm shadow-black/5 justify-between">

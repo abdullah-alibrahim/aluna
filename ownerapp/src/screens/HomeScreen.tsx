@@ -114,7 +114,7 @@ const HomeScreen = ({ navigation }: MainTabScreenProps<'Home'>) => {
   useEffect(() => {
     if (selectedShopId) {
       dispatch(fetchShopAnalytics(selectedShopId));
-      dispatch(fetchServices(selectedShopId));
+      dispatch(fetchServices({ shopId: selectedShopId, limit: 20, skip: 0 }));
       dispatch(fetchStaff(selectedShopId));
     }
   }, [selectedShopId, dispatch]);
@@ -123,7 +123,7 @@ const HomeScreen = ({ navigation }: MainTabScreenProps<'Home'>) => {
     loadInitialData();
     if (selectedShopId) {
       dispatch(fetchShopAnalytics(selectedShopId));
-      dispatch(fetchServices(selectedShopId));
+      dispatch(fetchServices({ shopId: selectedShopId, limit: 20, skip: 0 }));
       dispatch(fetchStaff(selectedShopId));
     }
   };
@@ -133,6 +133,8 @@ const HomeScreen = ({ navigation }: MainTabScreenProps<'Home'>) => {
   const hasHours = !!(selectedShop?.operatingHours?.some((h) => !h.isClosed && h.open && h.close));
   const setupComplete = !!selectedShop && services.length > 0 && staffList.length > 0 && hasHours && selectedShop.isApproved;
   const showSetup = !!selectedShop && !setupComplete;
+  const setupStepsDone = [!!selectedShop, services.length > 0, staffList.length > 0, hasHours, !!selectedShop?.isApproved].filter(Boolean).length;
+  const setupProgress = Math.round((setupStepsDone / 5) * 100);
 
   return (
     <View className="flex-1 bg-background">
@@ -226,6 +228,16 @@ const HomeScreen = ({ navigation }: MainTabScreenProps<'Home'>) => {
               <View className="px-3 mb-4">
                 <Text className="text-black-main font-figtree-bold text-lg mb-1">{t('ownerSetup.title')}</Text>
                 <Text className="text-gray-medium font-figtree-regular text-sm mb-3">{t('ownerSetup.subtitle')}</Text>
+                <View className="mb-3 rounded-2xl bg-white border border-gray-lighter p-4" accessibilityLabel={`اكتمل ${setupProgress} بالمئة من تجهيز المركز`}>
+                  <View className="mb-2 flex-row items-center justify-between">
+                    <Text className="text-black-main font-figtree-bold text-sm">تقدم الإعداد</Text>
+                    <Text className="text-primary font-figtree-bold text-sm">{setupProgress}%</Text>
+                  </View>
+                  <View className="h-2 overflow-hidden rounded-full bg-gray-lighter">
+                    <View className="h-full rounded-full bg-primary" style={{ width: `${setupProgress}%` }} />
+                  </View>
+                  <Text className="mt-2 text-gray-medium font-figtree-medium text-xs">{setupStepsDone} من 5 خطوات مكتملة</Text>
+                </View>
                 <SetupStep label={t('ownerSetup.createShop')} done={!!selectedShop} />
                 <SetupStep
                   label={t('ownerSetup.services')}

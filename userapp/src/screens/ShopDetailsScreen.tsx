@@ -117,8 +117,8 @@ export default function ShopDetailsScreen({ route, navigation }: Props) {
       const status = err?.response?.status;
       const msg =
         status === 404
-          ? 'هذا الصالون لم يعد متاحاً. ارجعي للرئيسية واسحبي للتحديث.'
-          : 'فشل تحميل تفاصيل الصالون';
+          ? 'هذا المركز لم يعد متاحاً. ارجعي للرئيسية واسحبي للتحديث.'
+          : 'فشل تحميل تفاصيل المركز';
       console.error('Failed to load shop details', err);
       setError(msg);
     } finally {
@@ -168,7 +168,7 @@ export default function ShopDetailsScreen({ route, navigation }: Props) {
   const TABS: { key: TabKey; label: string }[] = [
     { key: 'services', label: 'الخدمات' },
     { key: 'staff', label: 'المختصون' },
-    { key: 'about', label: 'عن الصالون' },
+    { key: 'about', label: 'عن مركز التجميل' },
     { key: 'reviews', label: 'التقييمات' },
   ];
 
@@ -270,7 +270,7 @@ export default function ShopDetailsScreen({ route, navigation }: Props) {
           {error ? (
             <View className="px-5 py-10 items-center">
               <Text className="font-figtree-bold text-base text-black-main text-center mb-2">
-                تعذّر فتح الصالون
+                تعذّر فتح مركز التجميل
               </Text>
               <Text className="font-figtree-medium text-sm text-gray-medium text-center mb-6 leading-5">
                 {error}

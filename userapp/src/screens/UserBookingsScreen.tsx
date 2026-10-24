@@ -27,7 +27,7 @@ import { fetchMyBookings, Booking, cancelMyBooking } from '@/store/slices/bookin
 import ReviewModal from '@/components/bookings/ReviewModal';
 import { fetchSettings } from '@/store/slices/settingSlice';
 import { bookingStatusLabel, paymentMethodLabel, paymentStatusLabel, t } from '@/i18n';
-import { formatMoney } from '@/utils/helper';
+import { formatMoney, formatDateAr, formatTimeRange } from '@/utils/helper';
 import { exitGuestForAuth } from '@/store/slices/authSlice';
 import dayjs from 'dayjs';
 import twConfig from '../../tailwind.config.js';
@@ -155,10 +155,10 @@ const UserBookingsScreen = () => {
           </View>
           <View>
             <Text className="font-figtree-bold text-base text-black-main">
-              {dayjs(item.date).format('MMM D, YYYY')}
+              {formatDateAr(item.date)}
             </Text>
             <Text className="font-figtree-medium text-xs text-primary">
-              {item.startTime} - {item.endTime}
+              {formatTimeRange(item.startTime, item.endTime)}
             </Text>
           </View>
         </View>
@@ -361,10 +361,10 @@ const UserBookingsScreen = () => {
                   <View className="flex-1 bg-white p-4 rounded-3xl mr-2 border border-gray-lighter shadow-sm shadow-black/5">
                     <Text className="font-figtree-regular text-xs text-gray-medium mb-1">{t('booking.dateTime')}</Text>
                     <Text className="font-figtree-bold text-sm text-black-main mb-1">
-                      {dayjs(selectedBooking.date).format('MMM D, YYYY')}
+                      {formatDateAr(selectedBooking.date)}
                     </Text>
                     <Text className="font-figtree-semibold text-primary text-xs">
-                      {selectedBooking.startTime} - {selectedBooking.endTime}
+                      {formatTimeRange(selectedBooking.startTime, selectedBooking.endTime)}
                     </Text>
                   </View>
                   <View className="flex-1 bg-white p-4 rounded-3xl ml-2 border border-gray-lighter shadow-sm shadow-black/5 justify-between">

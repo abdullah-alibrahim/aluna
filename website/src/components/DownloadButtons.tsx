@@ -25,8 +25,8 @@ type StoreButtonProps = {
 export function StoreButton({ store, variant = 'dark' }: StoreButtonProps) {
   const isApple = store === 'apple'
   const href = isApple ? APP_STORE_URL : PLAY_STORE_URL
-  const label = isApple ? 'App Store' : 'Google Play'
-  const sub = isApple ? 'حمّلي من' : 'احصلي عليه من'
+  const label = isApple ? 'App Store' : 'تحميل APK'
+  const sub = isApple ? (APP_STORE_URL ? 'حمّلي من' : 'قريباً') : 'أندرويد'
 
   const styles =
     variant === 'gold'
@@ -35,21 +35,39 @@ export function StoreButton({ store, variant = 'dark' }: StoreButtonProps) {
         ? 'bg-cream text-ink border border-gold/25 hover:border-gold/50'
         : 'bg-ink text-cream hover:bg-ink-soft'
 
-  return (
-    <motion.a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      whileHover={{ y: -3, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-      className={`inline-flex min-w-[190px] items-center gap-3 rounded-2xl px-5 py-3.5 transition-colors ${styles}`}
-    >
+  const content = (
+    <>
       <span className="shrink-0 opacity-95">{isApple ? <AppleIcon /> : <PlayIcon />}</span>
       <span className="flex flex-col items-start leading-tight">
         <span className="text-[11px] font-medium opacity-75">{sub}</span>
         <span className="text-[17px] font-semibold tracking-wide">{label}</span>
       </span>
+    </>
+  )
+
+  if (!href) {
+    return (
+      <div
+        aria-disabled="true"
+        className={`inline-flex min-w-[190px] cursor-not-allowed items-center gap-3 rounded-2xl px-5 py-3.5 opacity-50 ${styles}`}
+      >
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <motion.a
+      href={href}
+      target={isApple ? '_blank' : undefined}
+      rel={isApple ? 'noopener noreferrer' : undefined}
+      download={isApple ? undefined : ''}
+      whileHover={{ y: -3, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      className={`inline-flex min-w-[190px] items-center gap-3 rounded-2xl px-5 py-3.5 transition-colors ${styles}`}
+    >
+      {content}
     </motion.a>
   )
 }

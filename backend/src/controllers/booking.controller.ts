@@ -37,7 +37,7 @@ export const createBooking = async (req: Request, res: Response) => {
 
   if (branchId) {
     const branch = await Branch.findOne({ _id: branchId, shopId, isActive: true });
-    if (!branch) throw new BadRequestError('الفرع غير صالح لهذا الصالون');
+    if (!branch) throw new BadRequestError('الفرع غير صالح لهذا المركز');
   }
 
   const staff = await Staff.findOne({ _id: staffId as any, shopId: shopId as any });
@@ -182,7 +182,7 @@ export const createBooking = async (req: Request, res: Response) => {
     title: 'تم تأكيد طلب الحجز',
     message: depositAmount > 0
       ? `حجزك في ${shop.name} بانتظار التأكيد. العربون المتوقع: ${depositAmount} ${settings?.currency || 'ل.س'}`
-      : `حجزك في ${shop.name} بانتظار تأكيد الصالون.`,
+      : `حجزك في ${shop.name} بانتظار تأكيد مركز التجميل.`,
     type: NotificationType.BOOKING_UPDATED,
     data: { bookingId: booking._id, screen: 'Bookings' },
   });
@@ -205,7 +205,7 @@ export const getAvailability = async (req: Request, res: Response) => {
   const dayOfWeek = daysOfWeek[parsedDate.getUTCDay()];
 
   const shop = await Shop.findOne({ _id: shopId as any, isApproved: true });
-  if (!shop) throw new NotFoundError('الصالون غير موجود أو غير موافق عليه');
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود أو غير موافق عليه');
 
   const servicesArray = (serviceIds as string).split(',');
   const services = await Service.find({ _id: { $in: servicesArray } });
@@ -487,7 +487,7 @@ export const createGroupBooking = async (req: Request, res: Response) => {
   }
 
   const shop = await Shop.findOne({ _id: shopId, isApproved: true });
-  if (!shop) throw new NotFoundError('الصالون غير موجود أو غير موافق عليه');
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود أو غير موافق عليه');
 
   if (branchId) {
     const branch = await Branch.findOne({ _id: branchId, shopId, isActive: true });
@@ -572,11 +572,11 @@ export const createGroupBooking = async (req: Request, res: Response) => {
 
 // Payment Integration — disabled (Syria cash-only)
 export const createCheckoutSession = async (req: Request, res: Response) => {
-  throw new BadRequestError('الدفع الإلكتروني غير متاح. الدفع نقداً في الصالون فقط.');
+  throw new BadRequestError('الدفع الإلكتروني غير متاح. الدفع نقداً في المركز فقط.');
 };
 
 export const verifyPayment = async (req: Request, res: Response) => {
-  throw new BadRequestError('الدفع الإلكتروني غير متاح. الدفع نقداً في الصالون فقط.');
+  throw new BadRequestError('الدفع الإلكتروني غير متاح. الدفع نقداً في المركز فقط.');
 };
 
 // Slot Locking Logic
@@ -590,7 +590,7 @@ export const lockSlot = async (req: Request, res: Response) => {
 
   const shop = await Shop.findOne({ _id: shopId, isApproved: true });
   if (!shop) {
-    throw new BadRequestError('الصالون غير موافق عليه للحجز');
+    throw new BadRequestError('مركز التجميل غير موافق عليه للحجز');
   }
 
   const parsedDate = new Date(date);

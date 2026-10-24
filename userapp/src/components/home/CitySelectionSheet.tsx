@@ -107,7 +107,7 @@ const CitySelectionSheet = forwardRef<BottomSheetModal, any>((props, ref) => {
             اختاري موقعك
           </Text>
           <Text className="font-figtree-medium text-sm text-gray-medium text-center">
-            اختاري مدينتك لاكتشاف أفضل الصالونات والخدمات حولك.
+            اختاري مدينتك لاكتشاف أفضل مراكز التجميل والخدمات حولك.
           </Text>
         </View>
 

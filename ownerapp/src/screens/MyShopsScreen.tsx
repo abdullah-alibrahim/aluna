@@ -112,7 +112,7 @@ const MyShopsScreen = () => {
     <View className="flex-1 bg-background" style={{ paddingTop: insets.top }}>
       {/* Header */}
       <View className="flex-row items-center justify-between px-3 py-4 bg-background z-10">
-        <Text className="font-figtree-bold text-2xl text-black-main">صالوناتي</Text>
+        <Text className="font-figtree-bold text-2xl text-black-main">مراكز تجميلي</Text>
         <TouchableOpacity 
           onPress={() => navigation.navigate('CreateShop')}
           className="bg-primary flex-row items-center px-3 py-2 rounded-full shadow-sm shadow-primary/30"
@@ -138,15 +138,15 @@ const MyShopsScreen = () => {
               <View className="w-24 h-24 bg-primary/10 rounded-full items-center justify-center mb-6">
                 <Store size={40} color={colors.primary} />
               </View>
-              <Text className="font-figtree-bold text-2xl text-black-main text-center mb-2">لا توجد صالونات بعد</Text>
+              <Text className="font-figtree-bold text-2xl text-black-main text-center mb-2">لا توجد مراكز بعد</Text>
               <Text className="font-figtree-regular text-sm text-gray-medium text-center mb-8">
-                لم تسجّلي أي صالون بعد. سجّلي صالونك الأول لبدء استقبال الحجوزات.
+                لم تسجّلي أي مركز بعد. سجّلي مركزك الأول لبدء استقبال الحجوزات.
               </Text>
               <TouchableOpacity 
                 onPress={() => navigation.navigate('CreateShop')}
                 className="bg-primary w-full py-4 rounded-2xl items-center shadow-lg shadow-primary/30"
               >
-                <Text className="font-figtree-bold text-white text-lg">تسجيل صالون</Text>
+                <Text className="font-figtree-bold text-white text-lg">تسجيل مركز</Text>
               </TouchableOpacity>
             </View>
           }

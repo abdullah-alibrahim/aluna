@@ -65,7 +65,7 @@ export default function FavoritesScreen() {
             سجّلي الدخول للمفضلة
           </Text>
           <Text className="text-base font-figtree text-gray-medium text-center leading-relaxed mb-8">
-            احفظي صالوناتك المفضلة بعد تسجيل الدخول.
+            احفظي مراكز تجميلك المفضلة بعد تسجيل الدخول.
           </Text>
           <TouchableOpacity
             onPress={() => dispatch(exitGuestForAuth('Login'))}

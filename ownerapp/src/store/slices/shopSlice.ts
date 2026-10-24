@@ -53,7 +53,7 @@ export const createShop = createAsyncThunk(
       });
       return response.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'فشل إنشاء الصالون');
+      return rejectWithValue(err.response?.data?.message || 'فشل إنشاء المركز');
     }
   }
 );
@@ -65,7 +65,7 @@ export const fetchMyShops = createAsyncThunk(
       const response = await apiClient.get('/owner/shops');
       return response.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'فشل جلب صالوناتك');
+      return rejectWithValue(err.response?.data?.message || 'فشل جلب مراكز تجميلك');
     }
   }
 );
@@ -81,7 +81,7 @@ export const updateShop = createAsyncThunk(
       });
       return response.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'فشل تحديث الصالون');
+      return rejectWithValue(err.response?.data?.message || 'فشل تحديث مركز التجميل');
     }
   }
 );

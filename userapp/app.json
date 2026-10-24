@@ -8,7 +8,7 @@
     "userInterfaceStyle": "light",
     "scheme": "aluna",
     "primaryColor": "#B59451",
-    "description": "ألونا — احجزي موعدك في صالونات التجميل والحلاقة في سوريا. نقداً فقط.",
+    "description": "ألونا — احجزي موعدك في مراكز التجميل والحلاقة في سوريا. نقداً فقط.",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.shakeeldev.freshcutuserapp",
@@ -19,7 +19,7 @@
         "CFBundleDevelopmentRegion": "ar",
         "NSPhotoLibraryUsageDescription": "نحتاج الوصول للصور لتحديث صورة الملف الشخصي.",
         "NSCameraUsageDescription": "نحتاج الكاميرا لالتقاط صورة الملف الشخصي.",
-        "NSLocationWhenInUseUsageDescription": "نستخدم موقعك لعرض الصالونات القريبة منك.",
+        "NSLocationWhenInUseUsageDescription": "نستخدم موقعك لعرض المراكز القريبة منك.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
@@ -29,7 +29,9 @@
         "NSPrivacyAccessedAPITypes": [
           {
             "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
-            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
           }
         ]
       }
@@ -70,7 +72,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icon-store.png",
+          "image": "./assets/logo-v2.png",
           "resizeMode": "contain",
           "backgroundColor": "#F9F5EB"
         }
@@ -86,7 +88,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/adaptive-foreground.png",
+          "icon": "./assets/android-icon-monochrome.png",
           "color": "#B59451",
           "defaultChannel": "default"
         }

@@ -4,7 +4,9 @@ import { View, Image, FlatList, Dimensions, Animated } from 'react-native';
 interface BannerProps {
   banners: {
     _id?: string;
-    imageUrl: string;
+    imageUrl?: string;
+    /** Local require() module for bundled carousel art */
+    imageLocal?: number;
     targetLink?: string;
     isActive?: boolean;
   }[];
@@ -69,8 +71,12 @@ export default function Banner({ banners }: BannerProps) {
 
               {/* Main Image Layer */}
               <Image
-                source={{ uri: item.imageUrl || 'https://via.placeholder.com/800x400' }}
-                className="w-full h-[140px] rounded-[32px] object-cover bg-primary/10 border-[0.5px] border-white/20 z-10"
+                source={
+                  item.imageLocal
+                    ? item.imageLocal
+                    : { uri: item.imageUrl || undefined }
+                }
+                className="w-full h-[140px] rounded-[32px] object-cover bg-[#F9F5EB] border-[0.5px] border-white/20 z-10"
                 resizeMode="cover"
               />
             </View>

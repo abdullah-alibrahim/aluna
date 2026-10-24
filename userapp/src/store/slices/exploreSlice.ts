@@ -74,7 +74,7 @@ export const fetchExploreShops = createAsyncThunk(
       return response.data?.length ? response.data : storeDemoShops;
     } catch (err: any) {
       if (isStoreDemoMode()) return storeDemoShops as unknown as Shop[];
-      return rejectWithValue(err.response?.data?.message || 'فشل جلب الصالونات');
+      return rejectWithValue(err.response?.data?.message || 'فشل جلب مراكز التجميل');
     }
   }
 );

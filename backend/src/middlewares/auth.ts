@@ -28,13 +28,30 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     return next(new UnauthorizedError('Not authorized to access this route'));
   }
 
-  // Password-auth JWT (when Firebase Admin is not configured)
+  // Password-auth JWT (local / Vercel memory-mongo can reseed per instance)
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { uid?: string; email?: string; typ?: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      uid?: string;
+      email?: string;
+      typ?: string;
+      role?: string;
+    };
     if (decoded?.typ === 'password' && (decoded.uid || decoded.email)) {
-      const user =
+      let user =
         (decoded.uid && (await User.findById(decoded.uid))) ||
         (decoded.email ? await User.findOne({ email: decoded.email }) : null);
+
+      // Serverless in-memory DB: cold instances get a fresh empty DB — reseed then match by email
+      if (!user && decoded.email && process.env.USE_MEMORY_MONGO === '1') {
+        try {
+          const { seedTestAccounts } = await import('../scripts/seedTestAccounts');
+          await seedTestAccounts();
+          user = await User.findOne({ email: decoded.email });
+        } catch (seedErr) {
+          console.warn('Auth reseed failed:', (seedErr as Error).message);
+        }
+      }
+
       if (!user) {
         return next(new UnauthorizedError('User belonging to this token does not exist'));
       }
@@ -74,11 +91,11 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 export const authorize = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      return next(new UnauthorizedError('Not authorized'));
+      return next(new UnauthorizedError('غير مصرّح'));
     }
 
     if (!roles.includes(req.user.role)) {
-      return next(new ForbiddenError(`User role ${req.user.role} is not authorized to access this route`));
+      return next(new ForbiddenError('ليس لديك صلاحية لهذا الإجراء'));
     }
     next();
   };

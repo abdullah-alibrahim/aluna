@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, money } from '../../lib/api';
 import { badgeTone, shopStatusAr } from '../../lib/labels';
-import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard } from '../../components/ui';
+import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard, CardHeader, Field } from '../../components/ui';
 
 export default function OwnerHome() {
   const [shops, setShops] = useState<any[]>([]);
@@ -35,7 +35,10 @@ export default function OwnerHome() {
     try {
       await api('/owner/wallet/withdraw', {
         method: 'POST',
-        body: JSON.stringify({ amount: value }),
+        body: JSON.stringify({
+          amount: value,
+          payoutDetails: 'طلب سحب من لوحة الويب',
+        }),
       });
       setAmount('');
       await load();
@@ -51,33 +54,67 @@ export default function OwnerHome() {
 
   return (
     <div className="stack">
-      <PageHeader title="داشبورد المحل" subtitle="اختاري صالوناً لإدارة الحجوزات ونقطة البيع" />
+      <PageHeader
+        title="مراكزي"
+        subtitle="إدارة مراكز التجميل والحجوزات والمحفظة"
+        actions={
+          <Link to="/owner/create-shop" className="btn-link">
+            + إضافة مركز
+          </Link>
+        }
+      />
       <ErrorBanner message={error} />
 
       <div className="grid">
-        <StatCard label="صالوناتي" value={shops.length} />
-        <StatCard label="رصيد المحفظة" value={money(wallet?.balance)} hint="نقداً · ل.س" />
+        <StatCard icon="🏪" label="مراكز تجميلي" value={shops.length} hint="مركز مسجّل باسمك" />
+        <StatCard icon="💰" label="رصيد المحفظة" value={money(wallet?.balance)} hint="نقداً · ل.س" />
+      </div>
+
+      <div className="quick-links">
+        <Link to="/owner/bookings" className="quick-link">
+          <strong>📅 الحجوزات</strong>
+          <span className="muted">كل المراكز</span>
+        </Link>
+        <Link to="/owner/tickets" className="quick-link">
+          <strong>💬 الدعم</strong>
+          <span className="muted">تذاكر ورسائل</span>
+        </Link>
+        <Link to="/owner/wallet" className="quick-link">
+          <strong>💳 المحفظة</strong>
+          <span className="muted">رصيد وسحب</span>
+        </Link>
+        <Link to="/owner/profile" className="quick-link">
+          <strong>👤 الملف</strong>
+          <span className="muted">الحساب والإعدادات</span>
+        </Link>
       </div>
 
       <div className="card stack">
-        <strong>طلب سحب</strong>
-        <div className="row">
-          <input
-            placeholder="المبلغ"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            style={{ maxWidth: 220 }}
-          />
+        <CardHeader title="طلب سحب" extra={<span className="muted small">يراجعه الأدمن ثم يحوّل المبلغ</span>} />
+        <div className="row" style={{ alignItems: 'flex-end' }}>
+          <Field label="المبلغ (ل.س)" className="grow">
+            <input
+              type="number"
+              min="1"
+              placeholder="50000"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              style={{ maxWidth: 260 }}
+            />
+          </Field>
           <button type="button" disabled={withdrawing} onClick={requestWithdraw}>
             {withdrawing ? 'جاري الإرسال...' : 'إرسال طلب'}
           </button>
         </div>
-        <div className="muted small">يراجع الأدمن الطلب ثم يحوّل المبلغ.</div>
       </div>
 
       {shops.length === 0 ? (
         <div className="card">
-          <EmptyState title="ما عندك صالونات بعد" hint="أضيفي صالوناً من تطبيق المالك أولاً" />
+          <EmptyState
+            title="ما عندك مراكز بعد"
+            hint="أضيفي مركزاً من «إضافة مركز» في القائمة"
+            icon="🏪"
+          />
         </div>
       ) : (
         <div className="stack">
@@ -85,13 +122,18 @@ export default function OwnerHome() {
             const status = s.approvalStatus || (s.isApproved ? 'approved' : 'pending');
             return (
               <div key={s._id} className="card shop-card">
-                <div>
-                  <div className="title-row">
-                    <strong style={{ fontSize: '1.05rem' }}>{s.name}</strong>
-                    <Badge tone={badgeTone('shop', status)}>{shopStatusAr[status] || status}</Badge>
-                  </div>
-                  <div className="muted" style={{ marginTop: 4 }}>
-                    {s.address || s.cityId?.name || 'صالون'}
+                <div className="row" style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
+                  {s.images?.[0] ? (
+                    <img src={s.images[0]} alt="" className="shop-thumb" loading="lazy" />
+                  ) : null}
+                  <div>
+                    <div className="title-row">
+                      <strong style={{ fontSize: '1.05rem' }}>{s.name}</strong>
+                      <Badge tone={badgeTone('shop', status)}>{shopStatusAr[status] || status}</Badge>
+                    </div>
+                    <div className="muted" style={{ marginTop: 4 }}>
+                      {s.address || s.cityId?.name || 'مركز تجميل'}
+                    </div>
                   </div>
                 </div>
                 <div className="row">

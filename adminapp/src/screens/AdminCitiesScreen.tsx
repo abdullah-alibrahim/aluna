@@ -168,7 +168,7 @@ const AdminCitiesScreen = () => {
               <MapPin size={48} color="#D1C9C0" />
               <Text className="font-figtree-bold text-lg text-black-main mt-4">لا توجد مدن</Text>
               <Text className="font-figtree-medium text-sm text-gray-medium text-center mt-2">
-                أضيفي مدينة سورية لبدء ظهور الصالونات حسب الموقع.
+                أضيفي مدينة سورية لبدء ظهور مراكز التجميل حسب الموقع.
               </Text>
             </View>
           }

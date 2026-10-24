@@ -68,7 +68,7 @@ const ManageStaffScreen = () => {
   useEffect(() => {
     dispatch(fetchStaff(shop._id));
     if (services.length === 0) {
-      dispatch(fetchServices(shop._id));
+      dispatch(fetchServices({ shopId: shop._id, limit: 20, skip: 0 }));
     }
     apiClient
       .get(`/owner/shops/${shop._id}/branches`)
@@ -92,8 +92,8 @@ const ManageStaffScreen = () => {
     setEditingStaff(staff);
     setName(staff.name);
     setRole(staff.role);
-    const bid = typeof staff.branchId === 'object' && staff.branchId ? staff.branchId._id : staff.branchId || '';
-    setSelectedBranchId(bid);
+    const bid = typeof staff.branchId === 'object' && staff.branchId ? (staff.branchId as any)._id : staff.branchId || '';
+    setSelectedBranchId(bid as string);
     setSelectedServiceIds((staff.servicesProvided || []).map(s => typeof s === 'string' ? s : s._id));
     setImageUri(null);
     

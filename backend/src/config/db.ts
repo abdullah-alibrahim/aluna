@@ -4,13 +4,27 @@ import { env } from './env';
 export const connectDB = async () => {
   try {
     let uri = env.MONGO_URI;
+    const isAtlasOrRemote =
+      /^mongodb(\+srv)?:\/\//i.test(uri) && !/localhost|127\.0\.0\.1/i.test(uri);
 
-    // Local fallback when system MongoDB isn't installed
-    if (process.env.USE_MEMORY_MONGO === '1') {
+    // Prefer durable Mongo (Atlas). Memory DB only when forced AND no remote URI.
+    const wantMemory = process.env.USE_MEMORY_MONGO === '1' && !isAtlasOrRemote;
+    if (process.env.USE_MEMORY_MONGO === '1' && isAtlasOrRemote) {
+      console.warn('USE_MEMORY_MONGO ignored because MONGO_URI points to a remote database');
+    }
+
+    if (wantMemory) {
+      // Vercel sandbox has no writable $HOME — force downloads into /tmp
+      if (!process.env.HOME || process.env.HOME.startsWith('/home/sbx_')) {
+        process.env.HOME = '/tmp';
+      }
+      process.env.MONGOMS_DOWNLOAD_DIR = process.env.MONGOMS_DOWNLOAD_DIR || '/tmp';
       const { MongoMemoryServer } = await import('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
-      uri = mongod.getUri('salonapp');
-      console.log('Using in-memory MongoDB for local development');
+      const mongod = await MongoMemoryServer.create({
+        instance: { dbName: 'salonapp' },
+      });
+      uri = mongod.getUri();
+      console.log('Using in-memory MongoDB');
     }
 
     const conn = await mongoose.connect(uri);
@@ -18,7 +32,7 @@ export const connectDB = async () => {
 
     // Auto-seed only for in-memory Mongo or when explicitly enabled (never wipe/reseed production silently)
     try {
-      const memory = process.env.USE_MEMORY_MONGO === '1';
+      const memory = wantMemory;
       const autoSeed = process.env.AUTO_SEED === '1';
       if (memory || autoSeed) {
         const { runFullSyriaSeed } = await import('../services/seedSyriaData');

@@ -1,3 +1,5 @@
+import { brandCarouselBanners } from '@/lib/brandBanners';
+
 /** Demo fixtures for App Store / Play Store screenshot captures only. */
 export const storeDemoCity = {
   _id: 'demo-city-damascus',
@@ -16,7 +18,7 @@ export const storeDemoCategories = [
 export const storeDemoShops = [
   {
     _id: 's1',
-    name: 'صالون لمسة ذهب',
+    name: 'مركز لمسة ذهب',
     address: 'أبو رمانة، دمشق',
     rating: 4.9,
     reviewCount: 128,
@@ -24,7 +26,7 @@ export const storeDemoShops = [
     isFeatured: true,
     categoryIds: ['c1', 'c2'],
     startingPrice: 45000,
-    description: 'صالون نسائي فاخر في قلب أبو رمانة — حلاقة، صبغة، وعناية متكاملة.',
+    description: 'مركز تجميل نسائي فاخر في قلب أبو رمانة — حلاقة، صبغة، وعناية متكاملة.',
     cityId: storeDemoCity,
   },
   {
@@ -68,13 +70,7 @@ export const storeDemoShops = [
   },
 ];
 
-export const storeDemoBanners = [
-  {
-    _id: 'b1',
-    imageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?w=1200&q=80',
-    targetLink: '',
-  },
-];
+export const storeDemoBanners = brandCarouselBanners;
 
 export const storeDemoServices = [
   {
@@ -182,8 +178,10 @@ export function getStoreDemoShopDetails(shopId?: string) {
 }
 
 export function isStoreDemoMode() {
-  if (typeof window !== 'undefined') {
-    return window.location.search.includes('storeDemo=1');
+  // NOTE: `window` exists in React Native/Hermes but `window.location` is undefined there —
+  // touching it throws. Guard explicitly so the call is safe on native.
+  if (typeof window !== 'undefined' && (window as any).location && typeof (window as any).location.search === 'string') {
+    return (window as any).location.search.includes('storeDemo=1');
   }
   return process.env.EXPO_PUBLIC_STORE_DEMO === '1';
 }

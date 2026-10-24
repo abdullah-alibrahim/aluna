@@ -62,7 +62,7 @@ export const fetchPendingShops = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || 'فشل جلب الصالونات المعلّقة'
+        error.response?.data?.message || 'فشل جلب مراكز التجميل المعلّقة'
       );
     }
   }

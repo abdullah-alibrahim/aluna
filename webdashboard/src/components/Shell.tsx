@@ -19,19 +19,27 @@ export default function Shell({ links }: { links: LinkItem[] }) {
     if (!shopId) return [];
     return [
       { to: `/owner/shops/${shopId}`, label: 'داشبورد المحل', end: true },
-      { to: `/owner/shops/${shopId}/bookings`, label: 'الحجوزات' },
+      { to: `/owner/shops/${shopId}/bookings`, label: 'حجوزات المحل' },
+      { to: `/owner/shops/${shopId}/services`, label: 'الخدمات' },
+      { to: `/owner/shops/${shopId}/staff`, label: 'الموظفون' },
       { to: `/owner/shops/${shopId}/branches`, label: 'الفروع' },
+      { to: `/owner/shops/${shopId}/coupons`, label: 'الكوبونات' },
+      { to: `/owner/shops/${shopId}/portfolio`, label: 'معرض الأعمال' },
       { to: `/owner/shops/${shopId}/pos`, label: 'نقطة البيع' },
+      { to: `/owner/shops/${shopId}/edit`, label: 'تعديل المركز · ساعات' },
     ];
   }, [shopId]);
 
-  const roleLabel = me?.role === 'admin' ? 'داشبورد الأدمن' : 'داشبورد المحل';
+  const primary = links.filter((l) => !l.to.includes('/profile') && !l.to.includes('/notifications') && !l.to.includes('/settings'));
+  const account = links.filter((l) => l.to.includes('/profile') || l.to.includes('/notifications') || l.to.includes('/settings'));
+
+  const roleLabel = me?.role === 'admin' ? 'إدارة المنصة' : 'إدارة المركز';
 
   return (
     <div className="layout">
       <div className="mobile-top">
         <div className="brand-inline">ألونا</div>
-        <button type="button" className="secondary" onClick={() => setOpen(true)}>
+        <button type="button" className="secondary" onClick={() => setOpen(true)} aria-label="فتح القائمة">
           القائمة
         </button>
       </div>
@@ -45,44 +53,61 @@ export default function Shell({ links }: { links: LinkItem[] }) {
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="brand">
           <h1>ألونا</h1>
-          <div className="tag">{me?.role === 'admin' ? 'إدارة المنصة' : 'إدارة المحل'} · سوريا</div>
+          <div className="tag">{roleLabel} · سوريا</div>
         </div>
 
         <div className="user-chip">
           <strong>{me?.name || '—'}</strong>
-          <span>{roleLabel}</span>
+          <span>{me?.email || roleLabel}</span>
         </div>
 
-        <div className="nav-section-label">القائمة</div>
-        {links.map((l) => (
-          <NavLink
-            key={l.to}
-            to={l.to}
-            end={l.end ?? true}
-            className={({ isActive }) => (isActive ? 'active' : undefined)}
-          >
-            {l.label}
-          </NavLink>
-        ))}
+        <nav className="sidebar-nav" aria-label="القائمة الرئيسية">
+          <div className="nav-section-label">القائمة</div>
+          {primary.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.end ?? true}
+              className={({ isActive }) => (isActive ? 'active' : undefined)}
+            >
+              {l.label}
+            </NavLink>
+          ))}
 
-        {shopLinks.length > 0 && (
-          <>
-            <div className="nav-section-label">إدارة المحل</div>
-            {shopLinks.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.end}
-                className={({ isActive }) => (isActive ? 'active' : undefined)}
-              >
-                {l.label}
-              </NavLink>
-            ))}
-          </>
-        )}
+          {shopLinks.length > 0 && (
+            <>
+              <div className="nav-section-label">هذا المركز</div>
+              {shopLinks.map((l) => (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  end={l.end}
+                  className={({ isActive }) => (isActive ? 'active' : undefined)}
+                >
+                  {l.label}
+                </NavLink>
+              ))}
+            </>
+          )}
 
-        <div className="spacer" />
-        <button className="ghost" type="button" onClick={() => logout()}>
+          {account.length > 0 && (
+            <>
+              <div className="nav-section-label">الحساب</div>
+              {account.map((l) => (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  end={l.end ?? true}
+                  className={({ isActive }) => (isActive ? 'active' : undefined)}
+                >
+                  {l.label}
+                </NavLink>
+              ))}
+            </>
+          )}
+        </nav>
+
+        <button className="ghost sidebar-logout" type="button" onClick={() => logout()}>
           تسجيل الخروج
         </button>
       </aside>

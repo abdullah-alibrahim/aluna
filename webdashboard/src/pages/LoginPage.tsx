@@ -26,8 +26,12 @@ export default function LoginPage() {
     <div className="login-wrap">
       <form className="card login-card stack" onSubmit={onSubmit}>
         <div className="login-brand">
+          <div className="brand-badge" aria-hidden>
+            أ
+          </div>
           <h2>ألونا</h2>
-          <p className="muted">داشبورد الأدمن أو داشبورد المحل · نقداً · ل.س</p>
+          <p className="muted">لوحة التحكم لإدارة مراكز التجميل</p>
+          <p className="muted small" style={{ marginTop: 8 }}>للإدارة أو مالك المركز</p>
         </div>
         <input
           type="email"

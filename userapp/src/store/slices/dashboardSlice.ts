@@ -49,7 +49,7 @@ export const fetchOwnerShops = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || 'فشل جلب صالوناتك'
+        error.response?.data?.message || 'فشل جلب مراكز تجميلك'
       );
     }
   }
@@ -63,7 +63,7 @@ export const fetchShopAnalytics = createAsyncThunk(
       return response.data;
     } catch (error: any) {
       return rejectWithValue(
-        error.response?.data?.message || 'فشل جلب تحليلات الصالون'
+        error.response?.data?.message || 'فشل جلب تحليلات مركز التجميل'
       );
     }
   }

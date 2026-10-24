@@ -7,6 +7,7 @@ import { RootStackParamList } from '../types/navigation';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { fetchCoupons, collectCoupon, Coupon } from '../store/slices/couponSlice';
 import dayjs from 'dayjs';
+import { formatDateAr } from '@/utils/helper';
 import { t } from '@/i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Coupons'>;
@@ -110,7 +111,7 @@ const CouponsScreen: React.FC<Props> = ({ navigation }) => {
             <View className="flex-row items-center mb-4">
               <Calendar size={14} color="#6B7280" className="mr-1.5" />
               <Text className="font-figtree-medium text-xs text-gray-medium">
-                {t('coupons.validUntil')} {dayjs(item.expiryDate).format('MMM D, YYYY')}
+                {t('coupons.validUntil')} {formatDateAr(item.expiryDate)}
               </Text>
             </View>
 

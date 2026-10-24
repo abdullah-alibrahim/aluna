@@ -13,7 +13,7 @@ const paramId = (value: string | string[] | undefined) => {
 
 const assertOwnerShop = async (shopId: string, ownerId: string) => {
   const shop = await Shop.findById(shopId);
-  if (!shop) throw new NotFoundError('الصالون غير موجود');
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود');
   if (shop.ownerId.toString() !== ownerId) throw new ForbiddenError('غير مصرح');
   return shop;
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { CalendarDays } from 'lucide-react-native';
-import { formatTime12h } from '@/utils/helper';
+import { formatTimeAr } from '@/utils/helper';
 import { t } from '@/i18n';
 
 interface Slot {
@@ -65,7 +65,7 @@ export default function TimeSlotsStep({
               }`}
             >
               <Text className={`font-figtree-medium text-[15px] ${isSelected ? 'text-primary' : 'text-gray-medium'}`}>
-                {formatTime12h(slot.time)}
+                {formatTimeAr(slot.time)}
               </Text>
               {selectedStaffId === 'any' && (
                 <Text className={`font-figtree-medium text-[9px] ${isSelected ? 'text-primary' : 'text-gray-light'}`} numberOfLines={1}>

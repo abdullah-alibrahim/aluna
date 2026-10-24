@@ -29,7 +29,7 @@ ANDROID_SIZE = (1080, 1920)
 
 # Flat names requested for listing pack
 SCENES = [
-    ("01-home", "صالونك بضغطة", "اكتشفي صالونات مدينتك واحجزي فوراً"),
+    ("01-home", "مركزك بضغطة", "اكتشفي مراكز تجميل مدينتك واحجزي فوراً"),
     ("02-discover", "اختاري بسهولة", "صفّي حسب التصنيف والمدينة والمفضلة"),
     ("03-booking", "احجزي موعدك", "خدمة · مختص · وقت — بثلاث خطوات"),
     ("04-cash", "ادفعي نقداً", "بدون بطاقات · بالليرة السورية"),
@@ -135,7 +135,7 @@ def compose(
     bezel_color = INK if platform == "ios" else (32, 33, 36)
     place_phone(canvas, shot, top=phone_top, max_h=phone_max_h, bezel_color=bezel_color)
 
-    d.text((w // 2, int(h * 0.955)), ar("حجز صالونات · سوريا · نقداً"), font=font(int(h * 0.018)), fill=MUTED, anchor="mm")
+    d.text((w // 2, int(h * 0.955)), ar("حجز مراكز تجميل · سوريا · نقداً"), font=font(int(h * 0.018)), fill=MUTED, anchor="mm")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(out_path, "PNG", optimize=True)

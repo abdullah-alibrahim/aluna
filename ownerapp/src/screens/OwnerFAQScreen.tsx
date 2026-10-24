@@ -135,7 +135,7 @@ const OwnerFAQScreen = () => {
                 الأسئلة الشائعة
               </Text>
               <Text className="font-figtree-medium text-gray-medium text-center mt-3 text-sm px-4">
-                إجابات عن إدارة الصالون والمحفظة والحجوزات.
+                إجابات عن إدارة مركز التجميل والمحفظة والحجوزات.
               </Text>
             </View>
           )}

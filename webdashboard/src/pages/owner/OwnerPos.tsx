@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, money } from '../../lib/api';
 import { formatDate } from '../../lib/labels';
-import { EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard } from '../../components/ui';
+import { EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard, CardHeader, Field } from '../../components/ui';
 
 type Line = { name: string; unitPrice: string; quantity: string };
 
@@ -118,114 +118,154 @@ export default function OwnerPos() {
 
   return (
     <div className="stack">
-      <PageHeader title="نقطة البيع والمصاريف" subtitle="فواتير سريعة ومتابعة يومية" backTo="/owner" />
+      <PageHeader title="نقطة البيع والمصاريف" subtitle="فواتير سريعة ومتابعة يومية" backTo={`/owner/shops/${shopId}`} />
       <ErrorBanner message={error} />
 
-      <div className="grid">
-        <StatCard label="مبيعات اليوم" value={money(summary?.sales)} />
-        <StatCard label="مصاريف اليوم" value={money(summary?.expenses)} />
-        <StatCard label="الصافي" value={money(summary?.net)} />
+      <div className="grid cols-3">
+        <StatCard icon="🧾" label="مبيعات اليوم" value={money(summary?.sales)} />
+        <StatCard icon="📉" label="مصاريف اليوم" value={money(summary?.expenses)} />
+        <StatCard icon="💰" label="الصافي" value={money(summary?.net)} />
       </div>
 
-      <div className="grid">
+      <div className="pos-grid">
         <form className="card stack" onSubmit={createInvoice}>
-          <strong>فاتورة سريعة</strong>
-          <input
-            placeholder="اسم الزبون (اختياري)"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-          />
+          <CardHeader title="فاتورة سريعة" extra={<span className="muted small">تُحتسب ضمن مبيعات اليوم</span>} />
+          <Field label="اسم الزبون" hint="اختياري">
+            <input
+              placeholder="زبون نقدي"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
+          </Field>
+
+          <div className="line-head" aria-hidden>
+            <span>البند</span>
+            <span>الكمية</span>
+            <span>السعر (ل.س)</span>
+            <span />
+          </div>
           {lines.map((line, idx) => (
-            <div key={idx} className="row">
-              <input
-                placeholder="البند"
-                value={line.name}
-                onChange={(e) => updateLine(idx, { name: e.target.value })}
-              />
-              <input
-                placeholder="كمية"
-                style={{ maxWidth: 90 }}
-                value={line.quantity}
-                onChange={(e) => updateLine(idx, { quantity: e.target.value })}
-              />
-              <input
-                placeholder="السعر"
-                style={{ maxWidth: 120 }}
-                value={line.unitPrice}
-                onChange={(e) => updateLine(idx, { unitPrice: e.target.value })}
-              />
-              {lines.length > 1 && (
+            <div key={idx} className="line-row">
+              <label className="line-field line-name">
+                <span className="line-label">البند</span>
+                <input
+                  placeholder="مثال: قص شعر"
+                  value={line.name}
+                  onChange={(e) => updateLine(idx, { name: e.target.value })}
+                />
+              </label>
+              <label className="line-field">
+                <span className="line-label">الكمية</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={line.quantity}
+                  onChange={(e) => updateLine(idx, { quantity: e.target.value })}
+                />
+              </label>
+              <label className="line-field">
+                <span className="line-label">السعر (ل.س)</span>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={line.unitPrice}
+                  onChange={(e) => updateLine(idx, { unitPrice: e.target.value })}
+                />
+              </label>
+              {lines.length > 1 ? (
                 <button
                   type="button"
-                  className="secondary"
+                  className="secondary btn-icon"
+                  title="حذف البند"
                   onClick={() => setLines(lines.filter((_, i) => i !== idx))}
                 >
-                  حذف
+                  ✕
                 </button>
+              ) : (
+                <span />
               )}
             </div>
           ))}
-          <div className="row">
+
+          <div className="row" style={{ justifyContent: 'space-between' }}>
             <button
               type="button"
               className="secondary"
               onClick={() => setLines([...lines, { name: '', unitPrice: '', quantity: '1' }])}
             >
-              + بند
+              + إضافة بند
             </button>
-            <input
-              placeholder="خصم"
-              style={{ maxWidth: 140 }}
-              value={discount}
-              onChange={(e) => setDiscount(e.target.value)}
-            />
+            <Field label="خصم (ل.س)">
+              <input
+                type="number"
+                min="0"
+                placeholder="0"
+                style={{ maxWidth: 140 }}
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+              />
+            </Field>
           </div>
-          <div className="row">
-            <button
-              type="button"
-              className={paymentMethod === 'cash' ? '' : 'secondary'}
-              onClick={() => setPaymentMethod('cash')}
-            >
-              نقدي
-            </button>
-            <button
-              type="button"
-              className={paymentMethod === 'card' ? '' : 'secondary'}
-              onClick={() => setPaymentMethod('card')}
-            >
-              بطاقة
-            </button>
-            <span className="line-total">الإجمالي: {money(previewTotal)}</span>
+
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <div className="chip-row">
+              <button
+                type="button"
+                className={`chip${paymentMethod === 'cash' ? ' selected' : ''}`}
+                onClick={() => setPaymentMethod('cash')}
+              >
+                💵 نقدي
+              </button>
+              <button
+                type="button"
+                className={`chip${paymentMethod === 'card' ? ' selected' : ''}`}
+                onClick={() => setPaymentMethod('card')}
+              >
+                💳 بطاقة
+              </button>
+            </div>
+            <div className="pos-total">
+              <span className="muted small">الإجمالي</span>
+              <strong>{money(previewTotal)}</strong>
+            </div>
           </div>
+
           <button type="submit" disabled={saving}>
-            {saving ? 'جاري الإصدار...' : 'إصدار فاتورة'}
+            {saving ? 'جاري الإصدار...' : 'إصدار الفاتورة'}
           </button>
         </form>
 
         <form className="card stack" onSubmit={createExpense}>
-          <strong>مصروف</strong>
-          <input
-            placeholder="التصنيف"
-            value={expCategory}
-            onChange={(e) => setExpCategory(e.target.value)}
-            required
-          />
-          <input
-            placeholder="المبلغ"
-            value={expAmount}
-            onChange={(e) => setExpAmount(e.target.value)}
-            required
-          />
-          <button type="submit" className="secondary" disabled={saving}>
-            تسجيل مصروف
+          <CardHeader title="تسجيل مصروف" />
+          <Field label="التصنيف" required>
+            <input
+              placeholder="مستلزمات، كهرباء، رواتب..."
+              value={expCategory}
+              onChange={(e) => setExpCategory(e.target.value)}
+              required
+            />
+          </Field>
+          <Field label="المبلغ (ل.س)" required>
+            <input
+              type="number"
+              min="0"
+              placeholder="0"
+              value={expAmount}
+              onChange={(e) => setExpAmount(e.target.value)}
+              required
+            />
+          </Field>
+          <button type="submit" disabled={saving}>
+            + تسجيل المصروف
           </button>
         </form>
       </div>
 
       <div className="card stack">
-        <strong>آخر الفواتير</strong>
+        <CardHeader title={`آخر الفواتير`} />
         {invoices.length === 0 ? (
-          <EmptyState title="ما في فواتير اليوم" />
+          <EmptyState title="ما في فواتير اليوم" hint="الفواتير الصادرة بتظهر هنا" icon="🧾" />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -240,10 +280,10 @@ export default function OwnerPos() {
               <tbody>
                 {invoices.slice(0, 30).map((i) => (
                   <tr key={i._id}>
-                    <td>{i.invoiceNumber}</td>
-                    <td>{i.customerName || '—'}</td>
-                    <td>{i.paymentMethod === 'card' ? 'بطاقة' : 'نقدي'}</td>
-                    <td>{money(i.total)}</td>
+                    <td data-label="الرقم" dir="ltr" style={{ textAlign: 'right' }}>{i.invoiceNumber}</td>
+                    <td data-label="الزبون">{i.customerName || '—'}</td>
+                    <td data-label="الدفع">{i.paymentMethod === 'card' ? 'بطاقة' : 'نقدي'}</td>
+                    <td data-label="المبلغ" className="money">{money(i.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -253,9 +293,9 @@ export default function OwnerPos() {
       </div>
 
       <div className="card stack">
-        <strong>المصاريف</strong>
+        <CardHeader title="المصاريف" />
         {expenses.length === 0 ? (
-          <EmptyState title="لا مصاريف مسجّلة" />
+          <EmptyState title="لا مصاريف مسجّلة" hint="سجّلي مصاريف المركز لمتابعة الصافي" icon="📉" />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -264,14 +304,36 @@ export default function OwnerPos() {
                   <th>التصنيف</th>
                   <th>المبلغ</th>
                   <th>التاريخ</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {expenses.slice(0, 30).map((e) => (
                   <tr key={e._id}>
-                    <td>{e.category}</td>
-                    <td>{money(e.amount)}</td>
-                    <td>{formatDate(e.date || e.createdAt)}</td>
+                    <td data-label="التصنيف">{e.category}</td>
+                    <td data-label="المبلغ" className="money">{money(e.amount)}</td>
+                    <td data-label="التاريخ">{formatDate(e.date || e.createdAt)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="danger"
+                        disabled={saving}
+                        onClick={async () => {
+                          if (!confirm('حذف المصروف؟')) return;
+                          setSaving(true);
+                          try {
+                            await api(`/owner/shops/${shopId}/expenses/${e._id}`, { method: 'DELETE' });
+                            await load();
+                          } catch (err: any) {
+                            alert(err.message);
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                      >
+                        حذف
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

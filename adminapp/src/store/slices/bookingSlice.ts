@@ -12,6 +12,7 @@ export interface Booking {
   endTime: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   paymentStatus: 'pending' | 'paid';
+  paymentMethod?: 'cash' | 'stripe' | string;
   totalPrice: number;
   originalPrice: number;
   discountAmount: number;

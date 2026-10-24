@@ -90,7 +90,7 @@ export default function App() {
                 <AppNavigator />
                 <StatusBar style="dark" />
                 {!splashGone ? (
-                  <Animated.View style={[StyleSheet.absoluteFillObject, splashStyle, { zIndex: 99 }]} pointerEvents="none">
+                  <Animated.View style={[StyleSheet.absoluteFill as any, splashStyle, { zIndex: 99 }]} pointerEvents="none">
                     <BrandSplash subtitle="ألونا للمالكين" showLoader={!appReady} />
                   </Animated.View>
                 ) : null}
@@ -102,3 +102,5 @@ export default function App() {
     </Provider>
   );
 }
+
+// build marker: local API bundle (1792539233)

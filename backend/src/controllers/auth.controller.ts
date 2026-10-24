@@ -7,6 +7,7 @@ import City from '../models/City';
 import Category from '../models/Category';
 import { env } from '../config/env';
 import { BadRequestError, UnauthorizedError, ForbiddenError } from '../utils/errors';
+import cache from '../utils/cache';
 
 import '../config/firebase'; // Ensure Firebase is initialized
 import { getAuth } from 'firebase-admin/auth';
@@ -99,16 +100,34 @@ export const login = async (req: Request, res: Response) => {
     throw new BadRequestError('Firebase token is required');
   }
 
-  const decoded = await getAuth().verifyIdToken(token);
+  // Firebase Admin rejects malformed/expired/foreign tokens with untyped errors —
+  // map them to 401 so clients get a proper message instead of a 500.
+  let decoded;
+  try {
+    decoded = await getAuth().verifyIdToken(token);
+  } catch (err) {
+    const msg = (err as Error)?.message || 'Invalid Firebase token';
+    throw new UnauthorizedError(`Session token verification failed: ${msg}`);
+  }
 
   let user = await User.findOne({ firebaseUid: decoded.uid });
 
   if (!user && decoded.email) {
     user = await User.findOne({ email: decoded.email });
-    if (user) {
-      user.firebaseUid = decoded.uid;
-      await user.save();
+  }
+
+  // Phone-based accounts register with email `<digits>@phone.<domain>` —
+  // link back to the Mongo user by phone so seeded/registered accounts can sign in.
+  if (!user && decoded.email && decoded.email.includes('@phone.')) {
+    const digits = (decoded.email.split('@')[0] || '').replace(/\D/g, '');
+    if (digits) {
+      user = await User.findOne({ phone: `+${digits}` }) || await User.findOne({ phone: digits });
     }
+  }
+
+  if (user && user.firebaseUid !== decoded.uid) {
+    user.firebaseUid = decoded.uid;
+    await user.save();
   }
 
   if (!user) {
@@ -246,24 +265,39 @@ export const updateProfile = async (req: Request, res: Response) => {
 };
 
 export const getPublicSettings = async (req: Request, res: Response) => {
-  const settings = await PlatformSettings.findOne({ isGlobal: true }).select('-stripeSecretKey');
+  const key = 'settings:public';
+  let settings = cache.get(key);
+  if (!settings) {
+    settings = await PlatformSettings.findOne({ isGlobal: true }).select('-stripeSecretKey').lean();
+    cache.set(key, settings, 300);
+  }
   res.json(settings || { currency: 'ل.س', currencyCode: 'syp', platformCommissionRate: 10 });
 };
 
 export const getPublicCities = async (req: Request, res: Response) => {
-  const cities = await City.find({ isActive: true });
+  const key = 'cities:active';
+  let cities = cache.get(key);
+  if (!cities) {
+    cities = await City.find({ isActive: true }).select('name location coordinates').lean();
+    cache.set(key, cities, 600);
+  }
   res.json(cities);
 };
 
 export const getPublicCategories = async (req: Request, res: Response) => {
-  const categories = await Category.find({ isActive: true });
+  const key = 'categories:active';
+  let categories = cache.get(key);
+  if (!categories) {
+    categories = await Category.find({ isActive: true }).select('name description image isActive').lean();
+    cache.set(key, categories, 600);
+  }
   res.json(categories);
 };
 
 export const updatePassword = async (req: Request, res: Response) => {
   const { newPassword } = req.body;
 
-  const user = await User.findById(req.user?.id);
+  const user = await User.findById(req.user?.id).select('+password');
   if (!user) {
     throw new UnauthorizedError('User not found');
   }
@@ -272,13 +306,19 @@ export const updatePassword = async (req: Request, res: Response) => {
     throw new BadRequestError('كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل');
   }
 
-  if (!user.firebaseUid) {
-    throw new BadRequestError('الحساب غير مرتبط بـ Firebase');
-  }
+  // Keep local password auth in sync (web dashboard / password-login)
+  const bcrypt = await import('bcryptjs');
+  user.password = await bcrypt.hash(String(newPassword), 10);
+  await user.save();
 
-  // Client must reauthenticate with Firebase before calling this.
-  // Server updates Firebase Auth password via Admin SDK.
-  await getAuth().updateUser(user.firebaseUid, { password: String(newPassword) });
+  // Also update Firebase Auth when Admin SDK + firebaseUid are available
+  if (user.firebaseUid && !user.firebaseUid.startsWith('local-')) {
+    try {
+      await getAuth().updateUser(user.firebaseUid, { password: String(newPassword) });
+    } catch (err) {
+      console.warn('Firebase password update skipped:', (err as Error).message);
+    }
+  }
 
   res.json({ status: 'success', message: 'تم تحديث كلمة المرور بنجاح' });
 };

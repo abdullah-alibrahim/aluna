@@ -10,7 +10,7 @@ const paramId = (value: string | string[] | undefined) => {
 
 const assertOwnerShop = async (shopId: string, ownerId: string) => {
   const shop = await Shop.findById(shopId);
-  if (!shop) throw new NotFoundError('الصالون غير موجود');
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود');
   if (shop.ownerId.toString() !== ownerId) throw new ForbiddenError('غير مصرح');
   return shop;
 };
@@ -41,7 +41,7 @@ export const listOwnerBranches = async (req: Request, res: Response) => {
 export const listPublicBranches = async (req: Request, res: Response) => {
   const shopId = paramId(req.params.shopId);
   const shop = await Shop.findOne({ _id: shopId as any, isApproved: true });
-  if (!shop) throw new NotFoundError('الصالون غير موجود');
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود');
   const branches = await Branch.find({ shopId, isActive: true })
     .populate('cityId', 'name')
     .sort({ isMain: -1, name: 1 });

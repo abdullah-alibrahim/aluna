@@ -13,7 +13,7 @@ export const shopStatusAr: Record<string, string> = {
 };
 
 export const withdrawalStatusAr: Record<string, string> = {
-  pending: 'معلّق',
+  pending: 'قيد المراجعة',
   approved: 'موافق عليه',
   rejected: 'مرفوض',
   completed: 'مكتمل',

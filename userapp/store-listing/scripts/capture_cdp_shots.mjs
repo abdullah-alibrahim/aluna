@@ -118,7 +118,7 @@ async function main() {
 
   // Wait for demo shops
   for (let i = 0; i < 15; i++) {
-    const has = await page.evaluate(() => document.body.innerText.includes('صالون لمسة ذهب'));
+    const has = await page.evaluate(() => document.body.innerText.includes('مركز لمسة ذهب'));
     if (has) break;
     await sleep(500);
   }
@@ -131,7 +131,7 @@ async function main() {
 
   await clickText(page, 'الرئيسية');
   await sleep(800);
-  const opened = await clickText(page, 'صالون لمسة ذهب');
+  const opened = await clickText(page, 'مركز لمسة ذهب');
   if (!opened) {
     // tap first shop card image area
     await page.evaluate(() => {

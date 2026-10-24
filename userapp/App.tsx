@@ -21,6 +21,7 @@ import { setLocale } from '@/i18n';
 
 setLocale('ar');
 I18nManager.allowRTL(true);
+if (!I18nManager.isRTL) I18nManager.forceRTL(true);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -74,3 +75,5 @@ export default function App() {
     </Provider>
   );
 }
+
+// build marker: local API bundle (1792539233)

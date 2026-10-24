@@ -8,9 +8,17 @@ import Banner from '../models/Banner';
 import User from '../models/User';
 import Staff from '../models/Staff';
 import { NotFoundError, BadRequestError } from '../utils/errors';
+import cache, { cached } from '../utils/cache';
 
 // Browse Approved Shops
 export const getApprovedShops = async (req: Request, res: Response) => {
+  const key = `shops:approved:${JSON.stringify(req.query || {})}`;
+  const cachedShops = cache.get(key);
+  if (cachedShops) {
+    res.json(cachedShops);
+    return;
+  }
+
   const { cityId, search, longitude, latitude, radius, minRating, minPrice, maxPrice, date, categoryId, sortBy } = req.query;
 
   const pipeline: any[] = [];
@@ -98,8 +106,10 @@ export const getApprovedShops = async (req: Request, res: Response) => {
     }
   });
 
-  // Remove the services array to keep payload clean
-  pipeline.push({ $project: { shopServices: 0 } });
+  // Only send the cover image in list views to keep payloads small
+  pipeline.push({ $addFields: { images: { $slice: ['$images', 1] } } });
+  // Remove the services array and heavy/unused fields to keep payload clean
+  pipeline.push({ $project: { shopServices: 0, __v: 0, ownerId: 0, rejectionReason: 0, updatedAt: 0, createdAt: 0, location: 0 } });
 
   // 6.5 Dynamic Sorting
   let sortConfig: any = { isFeatured: -1, distance: 1 }; // Default
@@ -130,11 +140,16 @@ export const getApprovedShops = async (req: Request, res: Response) => {
   });
 
   const shops = await Shop.aggregate(pipeline);
+  cache.set(key, shops, 30);
   res.json(shops);
 };
 
 // Approved Shop details
 export const getShopDetails = async (req: Request, res: Response) => {
+  const key = `shop:details:${req.params.id}`;
+  const cachedDetail = cache.get(key);
+  if (cachedDetail) { res.json(cachedDetail); return; }
+
   const shop = await Shop.findOne({ _id: req.params.id as any, isApproved: true }).populate('cityId', 'name');
   if (!shop) throw new NotFoundError('Shop not found');
 
@@ -162,7 +177,9 @@ export const getShopDetails = async (req: Request, res: Response) => {
     Staff.find({ shopId: shop._id }).populate('servicesProvided', 'name'),
   ]);
 
-  res.json({ shop, services, staff, branches });
+  const payload = { shop, services, staff, branches };
+  cache.set(key, payload, 60);
+  res.json(payload);
 };
 
 // Favorites management
@@ -217,6 +234,11 @@ export const getShopPortfolio = async (req: Request, res: Response) => {
 
 // Banners
 export const getActiveBanners = async (req: Request, res: Response) => {
-  const banners = await Banner.find({ isActive: true }).sort({ createdAt: -1 });
+  const banners = await cached('banners:active', 300, async () => {
+    return await Banner.find({ isActive: true })
+      .select('title imageUrl targetLink isActive createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+  });
   res.json(banners);
 };

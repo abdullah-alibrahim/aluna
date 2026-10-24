@@ -109,7 +109,7 @@ const ProfileScreen = () => {
           <View className="ml-4 flex-1">
             <View className="flex-row items-center mb-1">
               <Text className="font-figtree-bold text-xl text-black-main mr-1" numberOfLines={1}>
-                {user?.name || 'مالكة الصالون'}
+                {user?.name || 'مالكة مركز التجميل'}
               </Text>
               <BadgeCheck size={18} color="#B59451" fill="#FFF" />
             </View>

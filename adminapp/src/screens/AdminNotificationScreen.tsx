@@ -111,7 +111,7 @@ const AdminNotificationScreen = () => {
             </View>
             <Text className="font-figtree-bold text-lg text-black-main mb-2">لا إشعارات بعد</Text>
             <Text className="font-figtree-regular text-sm text-gray-medium text-center px-6">
-              عند وجود تحديثات بخصوص الصالونات أو المستخدمين أو نشاط المنصة، ستظهر هنا.
+              عند وجود تحديثات بخصوص مراكز التجميل أو المستخدمين أو نشاط المنصة، ستظهر هنا.
             </Text>
           </View>
         ) : (

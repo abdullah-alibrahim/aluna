@@ -33,7 +33,7 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
 
   const { user, isGuest, isAuthenticated } = useAppSelector((state) => state.auth);
   const { unreadCount } = useAppSelector((state) => state.notifications);
-  const { categories, banners, shops, loading, selectedCity } = useAppSelector(
+  const { categories, banners, shops, loading, error, selectedCity } = useAppSelector(
     (state) => state.home
   );
 
@@ -146,6 +146,22 @@ export default function HomeScreen({ navigation }: MainTabScreenProps<'Home'>) {
           selectedCity={selectedCity}
           onLocationPress={() => citySheetRef.current?.present()}
         />
+
+        {error ? (
+          <View accessibilityRole="alert" className="mx-4 mb-3 rounded-2xl border border-error/20 bg-error-light px-4 py-3 flex-row items-center justify-between">
+            <Text className="flex-1 text-error font-figtree-medium text-sm" numberOfLines={2}>
+              تعذّر تحديث البيانات. تحقق من الاتصال وحاول مجدداً.
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="إعادة تحميل بيانات الصفحة الرئيسية"
+              onPress={() => loadData(selectedCity?._id)}
+              className="mr-3 px-3 py-2 rounded-full bg-white"
+            >
+              <Text className="text-primary font-figtree-bold text-xs">إعادة المحاولة</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         <SearchBar
           onPress={() => {

@@ -9,6 +9,7 @@ import {
   getShopBookings,
   updateBookingStatus,
   getMyWallet,
+  getWalletTransactions,
   requestWithdrawal,
   createCoupon,
   getShopCoupons,
@@ -114,6 +115,7 @@ router.delete('/portfolio/:id', catchAsync(deletePortfolioItem));
 
 // Wallet
 router.get('/wallet', catchAsync(getMyWallet));
+router.get('/wallet/transactions', catchAsync(getWalletTransactions));
 router.post('/wallet/withdraw', catchAsync(requestWithdrawal));
 
 export default router;

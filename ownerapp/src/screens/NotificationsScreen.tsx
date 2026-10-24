@@ -111,7 +111,7 @@ const NotificationsScreen = () => {
             </View>
             <Text className="font-figtree-bold text-lg text-black-main mb-2">لا إشعارات بعد</Text>
             <Text className="font-figtree-regular text-sm text-gray-medium text-center px-6">
-              عند وجود تحديثات بخصوص صالوناتك أو الحجوزات أو نشاط المنصة، ستظهر هنا.
+              عند وجود تحديثات بخصوص مراكز تجميلك أو الحجوزات أو نشاط المنصة، ستظهر هنا.
             </Text>
           </View>
         ) : (

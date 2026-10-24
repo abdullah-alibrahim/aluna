@@ -78,7 +78,7 @@ export const register = createAsyncThunk(
 
       if (response.data.role !== 'owner') {
         await firebaseUser.delete().catch(() => {});
-        return rejectWithValue('غير مصرح: لأصحاب الصالونات فقط');
+        return rejectWithValue('غير مصرح: لأصحاب مراكز التجميل فقط');
       }
       
       await safeSetItem('token', response.data.token);
@@ -118,7 +118,7 @@ export const login = createAsyncThunk(
       const response = await apiClient.post('/auth/login', { token: firebaseToken });
       
       if (response.data.role !== 'owner') {
-        return rejectWithValue('غير مصرح: لأصحاب الصالونات فقط');
+        return rejectWithValue('غير مصرح: لأصحاب مراكز التجميل فقط');
       }
       if (response.data.status === 'blocked' || response.data.isBlocked) {
         return rejectWithValue('تم حظر حسابك. يرجى التواصل مع الدعم.');

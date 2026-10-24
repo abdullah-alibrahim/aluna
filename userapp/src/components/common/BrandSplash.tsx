@@ -92,7 +92,7 @@ const BrandSplash: React.FC<BrandSplashProps> = ({
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
-    transform: [{ scale: logoScale.value }, { translateY: logoY.value }],
+    transform: [{ scale: logoScale.value }, { translateY: logoY.value }] as any,
   }));
 
   const glowStyle = useAnimatedStyle(() => ({
@@ -121,14 +121,14 @@ const BrandSplash: React.FC<BrandSplashProps> = ({
   }));
 
   return (
-    <View style={styles.root}>
+      <View style={styles.root}>
       <View style={styles.wash} pointerEvents="none" />
       <Animated.View style={[styles.glow, glowStyle]} pointerEvents="none" />
 
       <View style={styles.center}>
         <Animated.View style={[styles.logoWrap, logoStyle]}>
           <Animated.Image
-            source={require('../../../assets/logo.png')}
+            source={require('../../../assets/logo-v2.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wash: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#FBF6EC',
     opacity: 0.65,
   },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   logo: {
     width: Math.min(280, width * 0.72),
-    height: Math.min(280, width * 0.72),
+    height: Math.min(390, width * 0.92),
   },
   dividerRow: {
     flexDirection: 'row',

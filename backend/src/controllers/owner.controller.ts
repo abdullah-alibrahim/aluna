@@ -7,19 +7,22 @@ import Booking, { BookingStatus } from '../models/Booking';
 import Coupon from '../models/Coupon';
 import PortfolioItem from '../models/PortfolioItem';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../utils/errors';
+import { cached, invalidate } from '../utils/cache';
 import Wallet from '../models/Wallet';
+import Transaction, { TransactionType } from '../models/Transaction';
 import WithdrawalRequest, { WithdrawalStatus } from '../models/WithdrawalRequest';
 import { sendNotification } from '../services/notification.service';
 import { sendPushNotification } from '../utils/pushNotifications';
 import { NotificationType } from '../models/Notification';
 import mongoose from 'mongoose';
 import PlatformSettings from '../models/PlatformSettings';
+import { uploadedImageUrl } from '../middlewares/upload';
 
 // Shops
 export const createShop = async (req: Request, res: Response) => {
   const { name, description, address, cityId, categoryIds, longitude, latitude, operatingHours, slotInterval } = req.body;
 
-  const images = req.files ? (req.files as Express.Multer.File[]).map((f) => f.path) : [];
+  const images = req.files ? (req.files as Express.Multer.File[]).map((f) => uploadedImageUrl(f)!).filter(Boolean) : [];
 
   const shop = await Shop.create({
     ownerId: req.user!.id,
@@ -55,7 +58,9 @@ export const createShop = async (req: Request, res: Response) => {
 };
 
 export const getMyShops = async (req: Request, res: Response) => {
-  const shops = await Shop.find({ ownerId: req.user!.id }).populate('cityId', 'name');
+  const shops = await cached(`shops:owner:${req.user!.id}`, 60, async () => {
+    return await Shop.find({ ownerId: req.user!.id }).populate('cityId', 'name').lean();
+  });
   res.json(shops);
 };
 
@@ -68,7 +73,7 @@ export const updateShop = async (req: Request, res: Response) => {
   if (shop.ownerId.toString() !== req.user!.id) throw new ForbiddenError('Not your shop');
 
   // Handle new images
-  const newImages = req.files ? (req.files as Express.Multer.File[]).map((f) => f.path) : [];
+  const newImages = req.files ? (req.files as Express.Multer.File[]).map((f) => uploadedImageUrl(f)!).filter(Boolean) : [];
 
   // Handle existing images passed from frontend
   let parsedExistingImages = [];
@@ -104,6 +109,7 @@ export const updateShop = async (req: Request, res: Response) => {
 
   await shop.save();
   await shop.populate('cityId', 'name');
+  invalidate(`shops:owner:${req.user!.id}`);
 
   res.json(shop);
 };
@@ -129,11 +135,12 @@ export const addService = async (req: Request, res: Response) => {
   };
 
   if (req.file) {
-    serviceData.image = req.file.path;
+    serviceData.image = uploadedImageUrl(req.file);
   }
 
   const service = await Service.create(serviceData);
 
+  invalidate(`services:shop:${shopId}:*`);
   res.status(201).json(service);
 };
 
@@ -150,7 +157,16 @@ export const getShopServices = async (req: Request, res: Response) => {
     throw new ForbiddenError('Not authorized to view these services');
   }
 
-  const services = await Service.find({ shopId: parsedShopId }).populate('categoryId', 'name');
+  const limit = Math.min(Number(req.query.limit || 50), 100);
+  const skip = Number(req.query.skip || 0);
+  const services = await cached(`services:shop:${parsedShopId}:${limit}:${skip}`, 60, async () => {
+    return await Service.find({ shopId: parsedShopId })
+      .populate('categoryId', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  });
   res.json(services);
 };
 
@@ -174,12 +190,13 @@ export const updateService = async (req: Request, res: Response) => {
   if (bufferTime !== undefined) (service as any).bufferTime = Number(bufferTime);
 
   if (req.file) {
-    service.image = req.file.path;
+    service.image = uploadedImageUrl(req.file)!;
   }
 
   await service.save();
   await service.populate('categoryId', 'name');
 
+  invalidate(`services:shop:${shopId}:*`);
   res.json(service);
 };
 
@@ -196,6 +213,7 @@ export const deleteService = async (req: Request, res: Response) => {
 
   await service.deleteOne();
 
+  invalidate(`services:shop:${shopId}:*`);
   res.json({ message: 'Service deleted successfully' });
 };
 
@@ -209,11 +227,18 @@ export const getShopBookings = async (req: Request, res: Response) => {
     throw new ForbiddenError('Not authorized');
   }
 
-  const bookings = await Booking.find({ shopId: parsedShopId as string })
-    .populate('userId', 'name email phone')
-    .populate('serviceIds', 'name price duration')
-    .populate('staffId', 'name');
-
+  const limit = Math.min(Number(req.query.limit || 50), 100);
+  const skip = Number(req.query.skip || 0);
+  const bookings = await cached(`bookings:shop:${parsedShopId}:${limit}:${skip}`, 30, async () => {
+    return await Booking.find({ shopId: parsedShopId as string })
+      .populate('userId', 'name email phone')
+      .populate('serviceIds', 'name price duration')
+      .populate('staffId', 'name')
+      .sort({ date: -1, startTime: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  });
   res.json(bookings);
 };
 
@@ -226,9 +251,12 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
   if (!booking) throw new NotFoundError('Booking not found');
 
   const shop = booking.shopId as any;
-  if (shop.ownerId.toString() !== req.user!.id) {
+  const isAdmin = (req.user as any)?.role === 'admin';
+  if (!isAdmin && shop.ownerId.toString() !== req.user!.id) {
     throw new ForbiddenError('Not authorized');
   }
+
+  const wasCompleted = booking.status === BookingStatus.COMPLETED;
 
   const allowed = ['confirmed', 'completed', 'cancelled', 'no_show', 'pending'];
   if (!allowed.includes(status)) {
@@ -268,6 +296,87 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
   booking.status = status;
   await booking.save();
 
+  // Owner earnings: credit the shop owner's wallet when a booking is completed,
+  // and reverse it if the booking is later reopened/cancelled.
+  if (!wasCompleted && status === BookingStatus.COMPLETED && !booking.ownerCredited) {
+    const settings = await PlatformSettings.findOne({ isGlobal: true });
+    const rate = Number(settings?.platformCommissionRate ?? 10);
+    const net = Math.max(0, Math.round((booking.totalPrice * (100 - rate)) / 100));
+
+    let wallet = await Wallet.findOne({ ownerId: shop.ownerId });
+    if (!wallet) {
+      wallet = await Wallet.create({ ownerId: shop.ownerId });
+    }
+
+    if (net > 0) {
+      wallet.balance += net;
+      wallet.totalEarnings += net;
+      await wallet.save();
+
+      await Transaction.create({
+        ownerId: shop.ownerId,
+        shopId: shop._id,
+        bookingId: booking._id,
+        type: TransactionType.EARNING,
+        amount: net,
+        balanceAfter: wallet.balance,
+        description: `أرباح حجز مكتمل في ${shop.name}`,
+      }).catch(() => {});
+
+      booking.ownerCredited = true;
+      booking.ownerEarnings = net;
+      booking.paymentStatus = 'paid';
+      await Booking.updateOne(
+        { _id: booking._id },
+        { $set: { ownerCredited: true, ownerEarnings: net, paymentStatus: 'paid' } }
+      );
+
+      await sendNotification({
+        recipientId: shop.ownerId.toString(),
+        title: 'أرباح جديدة',
+        message: `أُضيف ${net.toLocaleString('en-US')} ل.س إلى محفظتك من حجز مكتمل في ${shop.name}`,
+        type: NotificationType.PAYMENT_RECEIVED,
+        data: { bookingId: booking._id, shopId: shop._id, screen: 'Wallet' },
+      });
+
+      const ownerUser = await mongoose.model('User').findById(shop.ownerId);
+      if (ownerUser?.pushToken) {
+        await sendPushNotification(
+          ownerUser.pushToken,
+          'أرباح جديدة',
+          `أُضيف ${net.toLocaleString('en-US')} ل.س إلى محفظتك`,
+          { screen: 'Wallet' }
+        );
+      }
+    }
+  } else if (wasCompleted && status !== BookingStatus.COMPLETED && booking.ownerCredited) {
+    const wallet = await Wallet.findOne({ ownerId: shop.ownerId });
+    const credited = Number(booking.ownerEarnings) || 0;
+
+    if (wallet) {
+      wallet.balance = Math.max(0, wallet.balance - credited);
+      wallet.totalEarnings = Math.max(0, wallet.totalEarnings - credited);
+      await wallet.save();
+
+      await Transaction.create({
+        ownerId: shop.ownerId,
+        shopId: shop._id,
+        bookingId: booking._id,
+        type: TransactionType.REFUND,
+        amount: -credited,
+        balanceAfter: wallet.balance,
+        description: `إلغاء عرض أرباح حجز مكتمل في ${shop.name}`,
+      }).catch(() => {});
+    }
+
+    booking.ownerCredited = false;
+    booking.ownerEarnings = 0;
+    await Booking.updateOne(
+      { _id: booking._id },
+      { $set: { ownerCredited: false, ownerEarnings: 0 } }
+    );
+  }
+
   const statusAr: Record<string, string> = {
     pending: 'قيد الانتظار',
     confirmed: 'مؤكّد',
@@ -295,10 +404,28 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
     );
   }
 
+  invalidate(`bookings:shop:${booking.shopId}:*`);
   res.json(booking);
 };
 
 // Wallet
+export const getWalletTransactions = async (req: Request, res: Response) => {
+  const limit = Math.min(Number(req.query.limit || 50), 100);
+  const skip = Number(req.query.skip || 0);
+  const type = req.query.type as string | undefined;
+
+  const filter: any = { ownerId: req.user!.id };
+  if (type) filter.type = type;
+
+  const transactions = await Transaction.find(filter)
+    .populate('shopId', 'name')
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  res.json(transactions);
+};
+
 export const getMyWallet = async (req: Request, res: Response) => {
   let wallet = await Wallet.findOne({ ownerId: req.user!.id });
 
@@ -342,6 +469,14 @@ export const requestWithdrawal = async (req: Request, res: Response) => {
   }
 
   try {
+    await Transaction.create({
+      ownerId: req.user!.id,
+      type: TransactionType.WITHDRAWAL,
+      amount: -numericAmount,
+      balanceAfter: wallet.balance,
+      description: `طلب سحب مبلغ ${numericAmount.toLocaleString()}`,
+    }).catch(() => {});
+
     const request = await WithdrawalRequest.create({
       ownerId: req.user!.id,
       amount: numericAmount,
@@ -474,7 +609,7 @@ export const addStaff = async (req: Request, res: Response) => {
   };
 
   if (req.file) {
-    staffData.avatar = req.file.path;
+    staffData.avatar = uploadedImageUrl(req.file);
   }
 
   const staff = await Staff.create(staffData);
@@ -550,7 +685,7 @@ export const updateStaff = async (req: Request, res: Response) => {
   }
 
   if (req.file) {
-    staff.avatar = req.file.path;
+    staff.avatar = uploadedImageUrl(req.file)!;
   }
 
   await staff.save();
@@ -708,7 +843,7 @@ export const addPortfolioItem = async (req: Request, res: Response) => {
 
   const portfolioData: any = {
     shopId: shopId as string,
-    imageUrl: req.file.path,
+    imageUrl: uploadedImageUrl(req.file)!,
   };
 
   if (caption) portfolioData.caption = caption;

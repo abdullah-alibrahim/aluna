@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/types/navigation';
-import { calculateEndTime } from '@/utils/helper';
+import { calculateEndTime, formatMoney } from '@/utils/helper';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { getShopDetailsForBooking, getAvailability, createNewBooking, createGroupBooking } from '@/store/slices/bookingSlice';
 import { isStoreDemoMode, storeDemoSlots } from '@/store/storeDemoData';
@@ -18,6 +18,7 @@ import { ChevronLeft, CheckCircle2, ArrowRight } from 'lucide-react-native';
 import { fetchCoupons, Coupon } from '@/store/slices/couponSlice';
 import twConfig from '../../tailwind.config.js';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Step Subcomponents
 import ServicesStep from '../components/booking/ServicesStep';
@@ -29,6 +30,13 @@ import { t } from '@/i18n';
 function getStoreDemoShot(): string | null {
   if (typeof window === 'undefined') return null;
   return new URLSearchParams(window.location.search).get('shot');
+}
+
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 const colors = twConfig.theme.extend.colors;
@@ -65,6 +73,34 @@ export default function BookingFlowScreen() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dates, setDates] = useState<Date[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<any | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const draftKey = `booking-draft:${shop._id}`;
+
+  useEffect(() => {
+    let active = true;
+    AsyncStorage.getItem(draftKey).then((value) => {
+      if (!active || !value) return;
+      const draft = JSON.parse(value);
+      setStep(Math.min(3, Math.max(1, Number(draft.step) || 1)));
+      setSelectedServiceIds(Array.isArray(draft.selectedServiceIds) ? draft.selectedServiceIds : []);
+      setSelectedStaffId(draft.selectedStaffId || 'any');
+      setSelectedBranchId(draft.selectedBranchId || '');
+      setSelectedDate(draft.selectedDate ? new Date(draft.selectedDate) : new Date());
+      setIsGroupBooking(Boolean(draft.isGroupBooking));
+      setCompanions(Array.isArray(draft.companions) ? draft.companions : []);
+    }).catch(() => undefined).finally(() => {
+      if (active) setDraftRestored(true);
+    });
+    return () => { active = false; };
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftRestored) return;
+    AsyncStorage.setItem(draftKey, JSON.stringify({
+      step, selectedServiceIds, selectedStaffId, selectedBranchId,
+      selectedDate: selectedDate.toISOString(), isGroupBooking, companions,
+    })).catch(() => undefined);
+  }, [draftRestored, draftKey, step, selectedServiceIds, selectedStaffId, selectedBranchId, selectedDate, isGroupBooking, companions]);
 
   const staffList = React.useMemo(() => {
     if (!selectedBranchId) return allStaff;
@@ -138,7 +174,7 @@ export default function BookingFlowScreen() {
   }, [step, selectedDate, selectedStaffId, selectedBranchId]);
 
   const fetchAvailability = () => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(selectedDate);
     const serviceQuery = selectedServiceIds.join(',');
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     dispatch(
@@ -224,7 +260,7 @@ export default function BookingFlowScreen() {
       const { duration, bufferTime } = calculateTotal();
       const endTime = calculateEndTime(selectedSlot.time, duration + bufferTime);
 
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = formatLocalDate(selectedDate);
 
       if (isGroupBooking && companions.length > 0) {
         if (companions.some((c) => !c.staffId)) {
@@ -251,6 +287,7 @@ export default function BookingFlowScreen() {
           })
         ).unwrap();
         navigation.replace('BookingSuccess', { bookingId: groupRes.bookings?.[0]?._id || groupRes.groupId });
+        await AsyncStorage.removeItem(draftKey).catch(() => undefined);
       } else {
         const bookingData = {
           shopId: shop._id,
@@ -265,6 +302,7 @@ export default function BookingFlowScreen() {
         };
         const bookRes = await dispatch(createNewBooking(bookingData)).unwrap();
         navigation.replace('BookingSuccess', { bookingId: bookRes._id });
+        await AsyncStorage.removeItem(draftKey).catch(() => undefined);
       }
 
       try {
@@ -322,6 +360,8 @@ export default function BookingFlowScreen() {
       {/* Header */}
       <View className="flex-row items-center px-3 py-3 bg-background relative z-10">
         <TouchableOpacity 
+          accessibilityRole="button"
+          accessibilityLabel={step > 1 ? 'العودة إلى الخطوة السابقة' : 'العودة'}
           onPress={() => step > 1 ? setStep(step - 1) : navigation.goBack()}
           className="w-10 h-10 rounded-full bg-gray-50 items-center justify-center border border-gray-lighter"
         >
@@ -350,9 +390,11 @@ export default function BookingFlowScreen() {
               <View className="flex-row items-center justify-between">
                 <View>
                   <Text className="font-figtree-medium text-[11px] text-gray-dark uppercase tracking-widest mb-1">{selectedServiceIds.length} {t('booking.selected')}</Text>
-                  <Text className="font-figtree-bold text-xl text-black-main">{currency}{originalPrice} <Text className="font-figtree-regular text-sm text-gray-dark">({duration} {t('common.minutes')})</Text></Text>
+                  <Text className="font-figtree-bold text-xl text-black-main">{formatMoney(originalPrice, currency)} <Text className="font-figtree-regular text-sm text-gray-dark">({duration} {t('common.minutes')})</Text></Text>
                 </View>
                 <TouchableOpacity 
+                  accessibilityRole="button"
+                  accessibilityLabel={`متابعة مع ${selectedServiceIds.length} خدمات، المجموع ${originalPrice} ${currency}، المدة ${duration} دقيقة`}
                   onPress={() => setStep(2)}
                   className="bg-primary px-8 h-14 rounded-full flex-row items-center justify-center"
                 >
@@ -386,6 +428,8 @@ export default function BookingFlowScreen() {
           
           <View className="absolute bottom-0 left-0 right-0 px-5 pt-4 bg-white/90 border-t border-gray-lighter" style={{ paddingBottom: insets.bottom > 0 ? insets.bottom + 10 : 24 }}>
             <TouchableOpacity 
+              accessibilityRole="button"
+              accessibilityLabel="عرض الأوقات المتاحة للتاريخ والموظف المحددين"
               onPress={() => setStep(3)}
               className="bg-primary w-full h-14 rounded-full flex-row items-center justify-center"
             >
@@ -411,6 +455,8 @@ export default function BookingFlowScreen() {
           {selectedSlot && (
             <Animated.View entering={FadeIn} className="absolute bottom-0 left-0 right-0 px-5 pt-4 bg-white/90 border-t border-gray-lighter" style={{ paddingBottom: insets.bottom > 0 ? insets.bottom + 10 : 24 }}>
                <TouchableOpacity 
+                accessibilityRole="button"
+                accessibilityLabel={`مراجعة الموعد في ${selectedSlot.time}`}
                 onPress={() => setStep(4)}
                 className="bg-primary w-full h-14 rounded-full flex-row items-center justify-center"
               >
@@ -446,6 +492,8 @@ export default function BookingFlowScreen() {
 
           <View className="absolute bottom-0 left-0 right-0 px-3 pt-4 bg-white/90 border-t border-gray-lighter" style={{ paddingBottom: insets.bottom > 0 ? insets.bottom + 10 : 24 }}>
              <TouchableOpacity 
+              accessibilityRole="button"
+              accessibilityLabel="تأكيد الحجز نقداً في المركز"
               onPress={handleConfirm}
               disabled={internalBookingLoading}
               className={`w-full h-14 rounded-full flex-row items-center justify-center ${internalBookingLoading ? 'bg-primary/50' : 'bg-primary'}`}

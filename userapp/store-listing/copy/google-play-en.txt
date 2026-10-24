@@ -6,19 +6,19 @@ App name (30):
 Aluna
 
 Short description (80):
-Book salon appointments in Syria. Find, book, and pay in cash.
+Book beauty center appointments in Syria. Find, book, and pay in cash.
 
 Full description:
-Aluna helps you book salon appointments across Syria — hair, beauty, grooming, and more.
+Aluna helps you book beauty center appointments across Syria — hair, beauty, grooming, and more.
 
-Discover nearby salons, pick a service and specialist, and confirm your slot in a few taps. Pay in cash at the salon in Syrian pounds.
+Discover nearby beauty centers, pick a service and specialist, and confirm your slot in a few taps. Pay in cash at the beauty center in Syrian pounds.
 
 Why Aluna?
-• Search salons by city and category
+• Search beauty centers by city and category
 • Fast booking with staff and time selection
 • Group booking for friends and family
 • Reschedule or cancel in the app
-• Coupons and salon offers
+• Coupons and beauty center offers
 • Appointment reminders
 • Cash-only payments — no cards required
 
@@ -28,4 +28,4 @@ Category:
 Beauty
 
 What's new (1.0.0):
-First release of Aluna — book salons in Syria with cash payment.
+First release of Aluna — book beauty centers in Syria with cash payment.

@@ -9,7 +9,8 @@ import {
   Image,
   ScrollView,
   Alert,
-  Platform
+  Platform,
+  TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -42,7 +43,7 @@ const colors = twConfig.theme.extend.colors;
 
 const TABS: { id: 'pending' | 'active'; label: string; icon: any }[] = [
   { id: 'pending', label: 'بانتظار الموافقة', icon: ShieldAlert },
-  { id: 'active', label: 'الصالونات النشطة', icon: ShieldCheck },
+  { id: 'active', label: 'مراكز التجميل النشطة', icon: ShieldCheck },
 ];
 
 const AdminShopsScreen = () => {
@@ -57,6 +58,7 @@ const AdminShopsScreen = () => {
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [pendingAction, setPendingAction] = useState<'approved' | 'rejected' | null>(null);
   const [rejectionNote, setRejectionNote] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     dispatch(fetchAllShops());
@@ -82,8 +84,10 @@ const AdminShopsScreen = () => {
     }
   };
 
-  const pendingShops = shops.filter(s => getApprovalStatus(s) !== 'approved');
-  const activeShops = shops.filter(s => getApprovalStatus(s) === 'approved');
+  const matchesSearch = (shop: Shop) => !search.trim() || [shop.name, shop.address, shop.ownerId?.name]
+    .filter(Boolean).some((value) => String(value).toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()));
+  const pendingShops = shops.filter(s => getApprovalStatus(s) !== 'approved' && matchesSearch(s));
+  const activeShops = shops.filter(s => getApprovalStatus(s) === 'approved' && matchesSearch(s));
 
   const handleUpdateStatus = async (status: 'approved' | 'rejected') => {
     if (!selectedShop) return;
@@ -172,7 +176,19 @@ const AdminShopsScreen = () => {
         >
           <ArrowLeft size={20} color={colors['black-main']} />
         </TouchableOpacity>
-        <Text className="font-figtree-bold text-xl text-black-main">إدارة الصالونات</Text>
+        <Text className="font-figtree-bold text-xl text-black-main">إدارة مراكز التجميل</Text>
+      </View>
+
+      <View className="px-4 pb-2">
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="ابحث باسم المركز أو المدينة أو المالك"
+          accessibilityLabel="البحث في المراكز"
+          textAlign="right"
+          returnKeyType="search"
+          className="rounded-2xl border border-gray-lighter bg-white px-4 py-3 font-figtree-medium text-sm text-black-main"
+        />
       </View>
 
       {/* Tabs */}
@@ -225,7 +241,7 @@ const AdminShopsScreen = () => {
           ListEmptyComponent={
             <View className="flex-1 items-center justify-center mt-20">
               <Text className="font-figtree-medium text-gray-medium">
-                {activeTab === 'pending' ? 'لا توجد صالونات بانتظار الموافقة.' : 'لا توجد صالونات نشطة.'}
+                {activeTab === 'pending' ? 'لا توجد مراكز بانتظار الموافقة.' : 'لا توجد مراكز نشطة.'}
               </Text>
             </View>
           }
@@ -248,7 +264,7 @@ const AdminShopsScreen = () => {
               <View className="w-12 h-1.5 bg-gray-300 rounded-full self-center mb-3" />
 
               <View className="flex-row justify-between items-center mb-3">
-                <Text className="font-figtree-bold text-2xl text-black-main">تفاصيل الصالون</Text>
+                <Text className="font-figtree-bold text-2xl text-black-main">تفاصيل المركز</Text>
                 <TouchableOpacity onPress={() => setSelectedShop(null)} className="w-8 h-8 bg-gray-lighter rounded-full items-center justify-center">
                   <X size={18} color="#14110A" />
                 </TouchableOpacity>

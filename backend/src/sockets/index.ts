@@ -106,9 +106,7 @@ export const initSocketIO = (server: HttpServer) => {
   return io;
 };
 
-export const getIO = () => {
-  if (!io) {
-    throw new Error('Socket.io not initialized!');
-  }
+export const getIO = (): SocketIOServer | null => {
+  // On Vercel serverless, sockets are not initialized — callers should no-op.
   return io;
 };

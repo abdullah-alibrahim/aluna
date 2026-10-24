@@ -15,10 +15,12 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
   ...props
 }) => {
   const isDisabled = disabled || loading;
-  
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       disabled={isDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={props.accessibilityLabel || title}
       className={`h-[50px] rounded-[24px] items-center justify-center shadow-lg shadow-primary/40 ${
         isDisabled ? 'bg-primary/50' : 'bg-primary'
       } ${className}`}

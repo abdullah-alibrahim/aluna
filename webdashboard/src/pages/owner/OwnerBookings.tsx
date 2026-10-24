@@ -53,7 +53,7 @@ export default function OwnerBookings() {
   return (
     <div className="stack">
       <PageHeader
-        title="حجوزات الصالون"
+        title="حجوزات المركز"
         subtitle={`${filtered.length} حجز`}
         backTo="/owner"
       />
@@ -65,6 +65,7 @@ export default function OwnerBookings() {
           <option value="confirmed">مؤكّد</option>
           <option value="completed">مكتمل</option>
           <option value="cancelled">ملغى</option>
+          <option value="no_show">لم يحضر</option>
         </select>
       </Toolbar>
       <div className="card">
@@ -85,16 +86,16 @@ export default function OwnerBookings() {
               <tbody>
                 {filtered.map((b) => (
                   <tr key={b._id}>
-                    <td>
+                    <td data-label="الزبون">
                       {b.userId?.name || '—'}
                       {b.guestName ? ` / ${b.guestName}` : ''}
                       {b.groupId ? <span className="muted"> · جماعي</span> : null}
                     </td>
-                    <td>
+                    <td data-label="الوقت">
                       {formatDate(b.date)} {b.startTime || ''}
                     </td>
-                    <td>{money(b.totalPrice)}</td>
-                    <td>
+                    <td data-label="المبلغ" className="money">{money(b.totalPrice)}</td>
+                    <td data-label="الحالة">
                       <Badge tone={badgeTone('booking', b.status)}>
                         {bookingStatusAr[b.status] || b.status}
                       </Badge>
@@ -106,14 +107,32 @@ export default function OwnerBookings() {
                         </button>
                       )}
                       {(b.status === 'pending' || b.status === 'confirmed') && (
-                        <button
-                          type="button"
-                          className="secondary"
-                          disabled={busyId === b._id}
-                          onClick={() => setStatus(b._id, 'completed')}
-                        >
-                          إكمال
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busyId === b._id}
+                            onClick={() => setStatus(b._id, 'completed')}
+                          >
+                            إكمال
+                          </button>
+                          <button
+                            type="button"
+                            className="secondary"
+                            disabled={busyId === b._id}
+                            onClick={() => setStatus(b._id, 'no_show')}
+                          >
+                            لم يحضر
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            disabled={busyId === b._id}
+                            onClick={() => setStatus(b._id, 'cancelled')}
+                          >
+                            إلغاء
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
