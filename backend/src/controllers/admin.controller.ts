@@ -182,6 +182,37 @@ export const toggleShopFeatured = async (req: Request, res: Response) => {
   res.json(shop);
 };
 
+export const deleteShop = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const shop = await Shop.findById(id);
+
+  if (!shop) {
+    throw new NotFoundError('مركز التجميل غير موجود');
+  }
+
+  const bookingCount = await Booking.countDocuments({ shopId: shop._id });
+
+  // Preserve financial/history integrity: if the shop already has bookings,
+  // deactivate it instead of hard-deleting so reports and wallets stay intact.
+  if (bookingCount > 0) {
+    shop.isActive = false;
+    shop.isApproved = false;
+    shop.approvalStatus = 'rejected' as any;
+    await shop.save();
+    res.json({
+      message: 'المركز لديه حجوزات سابقة، تم إيقافه وإخفاؤه بدلاً من حذفه',
+      id,
+      softDeleted: true,
+    });
+    return;
+  }
+
+  await Branch.deleteMany({ shopId: shop._id }).catch(() => undefined);
+  await shop.deleteOne();
+
+  res.json({ message: 'تم حذف مركز التجميل بنجاح', id, softDeleted: false });
+};
+
 // Platform Settings
 export const getSettings = async (req: Request, res: Response) => {
   let settings = await PlatformSettings.findOne({ isGlobal: true });

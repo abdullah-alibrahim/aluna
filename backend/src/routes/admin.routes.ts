@@ -24,6 +24,7 @@ import {
   replyToTicket,
   getAllBookings,
   toggleShopFeatured,
+  deleteShop,
   addBanner,
   getBanners,
   toggleBannerStatus,
@@ -70,6 +71,7 @@ router.route('/shops/')
 router.get('/shops/pending', catchAsync(getPendingShops));
 router.patch('/shops/:id/status', catchAsync(updateShopStatus));
 router.patch('/shops/:id/featured', catchAsync(toggleShopFeatured));
+router.delete('/shops/:id', catchAsync(deleteShop));
 
 // Settings
 router.route('/settings')
