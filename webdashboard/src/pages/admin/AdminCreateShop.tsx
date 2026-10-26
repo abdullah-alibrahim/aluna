@@ -10,6 +10,8 @@ export default function OwnerCreateShop() {
   const nav = useNavigate();
   const [cities, setCities] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [owners, setOwners] = useState<any[]>([]);
+  const [ownerId, setOwnerId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
@@ -26,10 +28,11 @@ export default function OwnerCreateShop() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    Promise.all([api('/auth/cities'), api('/auth/categories')])
-      .then(([c, cats]) => {
+    Promise.all([api('/auth/cities'), api('/auth/categories'), api('/admin/owners')])
+      .then(([c, cats, own]) => {
         setCities(c || []);
         setCategories(cats || []);
+        setOwners(own || []);
         if (c?.[0]?._id) setCityId(c[0]._id);
       })
       .catch((e) => setError(e.message))
@@ -60,6 +63,7 @@ export default function OwnerCreateShop() {
       form.append('latitude', lat);
       form.append('slotInterval', slotInterval);
       form.append('operatingHours', JSON.stringify(hours));
+      if (ownerId) form.append('ownerId', ownerId);
       images.forEach((f) => form.append('images', f));
       await apiForm("/admin/shops", form);
       nav('/admin/shops');
@@ -124,6 +128,20 @@ export default function OwnerCreateShop() {
               value={slotInterval}
               onChange={(e) => setSlotInterval(e.target.value)}
             />
+          </Field>
+          <Field
+            label="مالك المركز"
+            hint="اختياري — إن لم تحدّد يبقى المركز تحت إدارة المنصة"
+            className="span-2"
+          >
+            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+              <option value="">بدون مالك محدد (إدارة المنصة)</option>
+              {owners.map((o) => (
+                <option key={o._id} value={o._id}>
+                  {o.name} — {o.email}
+                </option>
+              ))}
+            </select>
           </Field>
           <div className="span-2 field">
             <span className="field-label">التصنيفات</span>

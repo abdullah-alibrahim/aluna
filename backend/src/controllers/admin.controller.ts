@@ -3,7 +3,7 @@ import City from '../models/City';
 import Category from '../models/Category';
 import Shop from '../models/Shop';
 import { NotFoundError, BadRequestError } from '../utils/errors';
-import { cached } from '../utils/cache';
+import { cached, invalidate } from '../utils/cache';
 import PlatformSettings from '../models/PlatformSettings';
 import WithdrawalRequest, { WithdrawalStatus } from '../models/WithdrawalRequest';
 import Payout, { PayoutStatus } from '../models/Payout';
@@ -20,6 +20,22 @@ import User, { UserRole } from '../models/User';
 
 import { getIO } from '../sockets';
 import { uploadedImageUrl } from '../middlewares/upload';
+
+/**
+ * Public shop data is cached in shop.controller (`shops:approved:*` 30s and
+ * `shop:details:*` 60s). Any write to a shop must drop those keys, otherwise
+ * the apps keep showing deleted/edited centers until the TTL expires.
+ */
+function invalidateShopCaches(shopId?: string) {
+  invalidate('shops:approved:*');
+  invalidate('shop:details:*');
+  invalidate('shops:owner:*');
+  if (shopId) {
+    invalidate(`dashboard:shop:${shopId}`);
+    invalidate(`analytics:shop:${shopId}`);
+  }
+}
+
 
 // Cities
 export const addCity = async (req: Request, res: Response) => {
@@ -165,6 +181,8 @@ export const updateShopStatus = async (req: Request, res: Response) => {
     data: { shopId: shop._id, status, screen: 'MyShops' },
   });
 
+  invalidateShopCaches(shop._id.toString());
+
   res.json(shop);
 };
 
@@ -178,6 +196,8 @@ export const toggleShopFeatured = async (req: Request, res: Response) => {
 
   shop.isFeatured = !shop.isFeatured;
   await shop.save();
+
+  invalidateShopCaches(String(id));
 
   res.json(shop);
 };
@@ -199,6 +219,7 @@ export const deleteShop = async (req: Request, res: Response) => {
     shop.isApproved = false;
     shop.approvalStatus = 'rejected' as any;
     await shop.save();
+    invalidateShopCaches(shop._id.toString());
     res.json({
       message: 'المركز لديه حجوزات سابقة، تم إيقافه وإخفاؤه بدلاً من حذفه',
       id,
@@ -209,6 +230,8 @@ export const deleteShop = async (req: Request, res: Response) => {
 
   await Branch.deleteMany({ shopId: shop._id }).catch(() => undefined);
   await shop.deleteOne();
+
+  invalidateShopCaches(String(id));
 
   res.json({ message: 'تم حذف مركز التجميل بنجاح', id, softDeleted: false });
 };
@@ -646,12 +669,23 @@ export const getDashboardStats = async (req: Request, res: Response) => {
 
 // Add a center (shop) directly from admin dashboard — auto-approved
 export const addShop = async (req: Request, res: Response) => {
-  const { name, description, address, cityId, categoryIds, longitude, latitude, operatingHours, slotInterval } = req.body;
+  const { name, description, address, cityId, categoryIds, longitude, latitude, operatingHours, slotInterval, ownerId } = req.body;
 
   const images = req.files ? (req.files as Express.Multer.File[]).map((f) => uploadedImageUrl(f)!).filter(Boolean) : [];
 
+  // Admin-created centers can be assigned to an existing salon owner.
+  // Without an explicit ownerId we fall back to the admin who created it.
+  let resolvedOwnerId = req.user!.id;
+  if (ownerId && String(ownerId) !== 'none') {
+    const owner = await User.findById(ownerId).select('_id role');
+    if (!owner) {
+      throw new BadRequestError('المستخدم المحدد كمالك غير موجود');
+    }
+    resolvedOwnerId = owner._id.toString();
+  }
+
   const shop = await Shop.create({
-    ownerId: req.user!.id,
+    ownerId: resolvedOwnerId,
     name,
     description,
     address,
@@ -683,5 +717,16 @@ export const addShop = async (req: Request, res: Response) => {
     // non-fatal
   }
 
+  invalidateShopCaches(shop._id.toString());
+
   res.status(201).json(shop);
+};
+
+/** Salon owners an admin can assign a new center to. */
+export const getOwners = async (_req: Request, res: Response) => {
+  const owners = await User.find({ role: UserRole.OWNER })
+    .select('_id name email phone')
+    .sort({ name: 1 })
+    .lean();
+  res.json(owners);
 };

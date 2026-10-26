@@ -77,6 +77,9 @@ export const createShop = async (req: Request, res: Response) => {
 
   invalidate(`shops:owner:${req.user!.id}`);
   invalidate(`dashboard:shop:${shop._id}`);
+  // keep public listings/details in sync (new center may be auto-approved later)
+  invalidate('shops:approved:*');
+  invalidate('shop:details:*');
   res.status(201).json(shop);
 };
 
@@ -133,6 +136,9 @@ export const updateShop = async (req: Request, res: Response) => {
   await shop.save();
   await shop.populate('cityId', 'name');
   invalidate(`shops:owner:${req.user!.id}`);
+  invalidate('shops:approved:*');
+  invalidate(`shop:details:${shop._id}`);
+  invalidate(`dashboard:shop:${shop._id}`);
 
   res.json(shop);
 };

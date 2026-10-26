@@ -9,6 +9,7 @@ import {
   getCategories,
   getPendingShops,
   getAllShops,
+  getOwners,
   addShop,
   updateShopStatus,
   getSettings,
@@ -64,6 +65,7 @@ router.put('/categories/:id', upload.single('image'), catchAsync(updateCategory)
 
 router.post('/shops', upload.array('images', 5), catchAsync(addShop));
 router.post('/shops/', upload.array('images', 5), catchAsync(addShop));
+router.get('/owners', catchAsync(getOwners));
 router.route('/shops')
   .get(catchAsync(getAllShops));
 router.route('/shops/')

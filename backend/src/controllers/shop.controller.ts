@@ -140,7 +140,7 @@ export const getApprovedShops = async (req: Request, res: Response) => {
   });
 
   const shops = await Shop.aggregate(pipeline);
-  cache.set(key, shops, 30);
+  cache.set(key, shops, 20);
   res.json(shops);
 };
 
@@ -178,7 +178,7 @@ export const getShopDetails = async (req: Request, res: Response) => {
   ]);
 
   const payload = { shop, services, staff, branches };
-  cache.set(key, payload, 60);
+  cache.set(key, payload, 30);
   res.json(payload);
 };
 

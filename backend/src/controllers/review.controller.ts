@@ -4,6 +4,7 @@ import Review from '../models/Review';
 import Shop from '../models/Shop';
 import Booking, { BookingStatus } from '../models/Booking';
 import { BadRequestError, NotFoundError } from '../utils/errors';
+import { invalidate } from '../utils/cache';
 
 export const createReview = async (req: Request, res: Response) => {
   const shopId = req.params.shopId as string;
@@ -84,6 +85,8 @@ export const createReview = async (req: Request, res: Response) => {
       rating: Math.round(stats[0].averageRating * 10) / 10, // Round to 1 decimal place
       reviewCount: stats[0].reviewCount,
     });
+    invalidate('shops:approved:*');
+    invalidate(`shop:details:${shopId}`);
   }
 
   res.status(201).json(review);

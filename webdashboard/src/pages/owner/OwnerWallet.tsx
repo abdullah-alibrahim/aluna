@@ -113,9 +113,9 @@ export default function OwnerWallet() {
       </form>
 
       <div className="card stack">
-        <CardHeader title={`سجل Transações (${transactions.length})`} />
+        <CardHeader title={`سجل العمليات (${transactions.length})`} />
         {transactions.length === 0 ? (
-          <EmptyState title="لا توجد لغةains" hint="الscoreد" icon="coin" />
+          <EmptyState title="لا توجد عمليات بعد" hint="تظهر هنا الأرباح والسحوبات والتسويات" icon="🧾" />
         ) : (
           <div className="table-wrap">
             <table className="table">
