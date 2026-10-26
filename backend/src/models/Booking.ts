@@ -116,6 +116,9 @@ const BookingSchema: Schema = new Schema(
 BookingSchema.index({ shopId: 1, date: 1, status: 1 });
 BookingSchema.index({ userId: 1, status: 1 });
 BookingSchema.index({ shopId: 1, status: 1, createdAt: -1 });
+// Owner-wide lists: filter by shop set + status, sorted by appointment date
+BookingSchema.index({ shopId: 1, status: 1, date: -1 });
+BookingSchema.index({ shopId: 1, date: -1 });
 BookingSchema.index({ status: 1, createdAt: -1 });
 BookingSchema.index({ staffId: 1, date: 1, status: 1 });
 
