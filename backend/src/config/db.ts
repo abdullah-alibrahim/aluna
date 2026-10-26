@@ -27,7 +27,15 @@ export const connectDB = async () => {
       console.log('Using in-memory MongoDB');
     }
 
-    const conn = await mongoose.connect(uri);
+    // Serverless: many short-lived lambdas × default pool (100) can exhaust the
+    // Atlas free tier's 500-connection cap. Keep a small pool per instance.
+    const conn = await mongoose.connect(uri, {
+      maxPoolSize: 10,
+      minPoolSize: 0,
+      maxIdleTimeMS: 60_000,
+      serverSelectionTimeoutMS: 15_000,
+      socketTimeoutMS: 45_000,
+    });
     (globalThis as any).__alunaDb = {
       mode: wantMemory ? 'memory' : isAtlasOrRemote ? 'remote' : 'local',
       host: conn.connection.host,
