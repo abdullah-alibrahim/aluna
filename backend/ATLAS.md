@@ -1,18 +1,45 @@
-# MongoDB Atlas (إنتاج ثابت)
+# MongoDB Atlas (قاعدة الإنتاج الثابتة)
 
-على Vercel الذاكرة المؤقتة (`USE_MEMORY_MONGO=1`) تسبب ضياع بيانات واختلاف `shopId` بين الطلبات.
+**الحالة: مُفعّلة على الإنتاج ✅**
 
-## الخطوات
+| العنصر | القيمة |
+|---|---|
+| Cluster | `aluna-cluster` (M0 — Free) |
+| المزوّد / المنطقة | AWS / N. Virginia `us-east-1` (نفس منطقة دوال Vercel الافتراضية `iad1`) |
+| إصدار MongoDB | 8.0.x |
+| قاعدة البيانات | `aluna` |
+| مستخدم قاعدة البيانات | `aluna_app` (دور: `readWriteAnyDatabase@admin`) |
+| الشبكة | `0.0.0.0/0` — لأن Vercel Serverless يتصل من IPات متغيرة |
 
-1. أنشئي cluster مجاني على [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-2. Network Access → اسمحي بـ `0.0.0.0/0` (أو IPات Vercel).
-3. Database Access → مستخدم بكلمة مرور.
-4. Connect → انسخي URI بصيغة:
-   `mongodb+srv://USER:PASS@cluster.../aluna?retryWrites=true&w=majority`
-5. في مشروع Vercel `aluna-api`:
-   - عيّني `MONGO_URI` = رابط Atlas
-   - احذفي أو عطّلي `USE_MEMORY_MONGO` (أو اتركيها؛ الكود يتجاهلها إذا كان URI بعيداً عن localhost)
-   - اختياري أول مرة: `AUTO_SEED=1` و `SEED_TEST_ACCOUNTS=1` ثم عطّليهما بعد البذر
-6. Redeploy الـ API.
+## ما تغيّر في Vercel (مشروع `aluna-api`)
 
-بعدها الحجوزات والمراكز والصور تثبت عبر كل الـ instances.
+- `MONGO_URI` = رابط Atlas (Production + Preview) — نوعه **Secret**.
+- `USE_MEMORY_MONGO` = **محذوف** من Production وPreview.
+- `AUTO_SEED` غير مفعّل، لذلك إعادة النشر **لا** تمسح أو تعيد بذر البيانات.
+
+> ⚠️ لا تُكتب كلمة مرور قاعدة البيانات في هذا الملف ولا في أي ملف داخل الريبو (المستودع عام).
+> الرابط الكامل محفوظ في Vercel → Settings → Environment Variables.
+> لتدوير كلمة المرور: Atlas → Database Access → `aluna_app` → Edit → Edit Password، ثم حدّث `MONGO_URI` في Vercel وأعد النشر.
+
+## كيفية التحقق سريعاً
+
+```bash
+curl -s https://aluna-api-flax.vercel.app/api/health | python3 -m json.tool
+# يجب أن يظهر: "db": { "mode": "remote", "state": "connected", ... }
+```
+
+`mode: remote` = متصل بـ Atlas، و`memory` = قاعدة مؤقتة في الذاكرة (لا تستخدمها في الإنتاج).
+
+## البذر (مرة واحدة فقط)
+
+```bash
+cd backend
+MONGO_URI='<atlas-uri>' USE_MEMORY_MONGO=0 npm run seed:syria
+MONGO_URI='<atlas-uri>' USE_MEMORY_MONGO=0 npm run seed:test-accounts
+```
+
+تم تنفيذ البذر مرة واحدة على Atlas: 13 مدينة، 7 تصنيفات، 5 مراكز تجريبية، مركز اختبار واحد، خدمات/موظفون/فروع/حجوزات، وحسابات الاختبار الثلاثة.
+
+## التطوير المحلي
+
+اتركي `backend/.env` كما هو (`mongodb://127.0.0.1:27017/salonapp` + `USE_MEMORY_MONGO=1`) — الكود يتجاهل `USE_MEMORY_MONGO` تلقائياً إذا كان `MONGO_URI` بعيداً، فيمكنك استخدام Atlas محلياً بلصق الرابط في `.env` دون تغيير أي كود.
