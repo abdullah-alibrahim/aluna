@@ -8,10 +8,23 @@ export async function resolveOwnerShop(preferredId?: string) {
   return { shops, shop };
 }
 
-export function arAuthError(message?: string) {
-  if (!message) return '';
-  if (/not authorized|not your shop|shop not found|does not exist/i.test(message)) {
-    return 'المركز غير متاح حالياً — ارجعي لمراكزي وافتحي المركز من جديد';
+/**
+ * Turn backend error codes into clear Arabic guidance.
+ * `SHOP_NOT_FOUND` means the stored id no longer exists (demo DB reseed) — the
+ * owner pages auto-redirect, this is the fallback message.
+ */
+export function arAuthError(message?: string, code?: string) {
+  if (
+    code === 'SHOP_NOT_FOUND' ||
+    /shop not found|does not exist|مركز التجميل غير موجود/i.test(message || '')
+  ) {
+    return 'تغيّرت بيانات المركز (تحديث بيئة العرض) — يرجى فتح مركزك من «مراكزي»';
   }
-  return message;
+  if (
+    code === 'NOT_SHOP_OWNER' ||
+    /not authorized|not your shop|غير مصرح/i.test(message || '')
+  ) {
+    return 'هذا المركز غير متاح لهذا الحساب — افتحي مركزك من «مراكزي»';
+  }
+  return message || '';
 }

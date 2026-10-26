@@ -1,85 +1,53 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { api, money } from '../../lib/api';
 import { badgeTone, bookingStatusAr, formatDate, shopStatusAr } from '../../lib/labels';
+import { arAuthError } from '../../lib/ownerShop';
+import { useOwnerShopId } from '../../hooks/useOwnerShopId';
 import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard, CardHeader } from '../../components/ui';
 
-async function soft<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
-  try {
-    return await fn();
-  } catch {
-    return fallback;
-  }
-}
-
 export default function OwnerShopHome() {
-  const { shopId } = useParams();
-  const navigate = useNavigate();
-  const [shop, setShop] = useState<any>(null);
-  const [analytics, setAnalytics] = useState<any>(null);
-  const [pos, setPos] = useState<any>(null);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
-  const [branches, setBranches] = useState<any[]>([]);
+  const { shopId, ready, error: shopError } = useOwnerShopId();
+  const [data, setData] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!ready || !shopId) return;
     let cancelled = false;
+
     (async () => {
       setLoading(true);
-      setError('');
       try {
-        const shops = await api('/owner/shops');
+        // Single aggregated request replaces the previous six parallel calls.
+        const payload = await api(`/owner/shops/${shopId}/dashboard`);
         if (cancelled) return;
-        const found = (shops || []).find((s: any) => s._id === shopId) || shops?.[0] || null;
-        if (!found) {
-          setShop(null);
-          setError('ما في مركز مرتبط بالحساب');
-          return;
-        }
-        if (shopId && found._id !== shopId) {
-          navigate(`/owner/shops/${found._id}`, { replace: true });
-          return;
-        }
-        setShop(found);
-        const id = found._id;
-        const [a, p, b, st, br] = await Promise.all([
-          soft(() => api(`/owner/shops/${id}/analytics`), null),
-          soft(() => api(`/owner/shops/${id}/pos/summary`), null),
-          soft(() => api(`/owner/shops/${id}/bookings`), []),
-          soft(() => api(`/owner/shops/${id}/staff`), []),
-          soft(() => api(`/owner/shops/${id}/branches`), []),
-        ]);
-        if (cancelled) return;
-        setAnalytics(a);
-        setPos(p);
-        setBookings(b || []);
-        setStaff(st || []);
-        setBranches(br || []);
+        setData(payload);
+        setError('');
       } catch (e: any) {
-        if (!cancelled) setError(e.message === 'Not authorized' ? 'انتهت الجلسة أو تغيّرت البيئة — أعيدي تسجيل الدخول' : e.message);
+        if (!cancelled) setError(arAuthError(e.message, e.code) || 'تعذّر تحميل لوحة المركز');
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, [shopId, navigate]);
+  }, [ready, shopId]);
+
+  const shop = data?.shop;
+  const analytics = data?.analytics;
+  const pos = data?.pos;
+  const bookings: any[] = data?.bookings || [];
+  const upcoming: any[] = data?.upcoming || [];
+  const staff: any[] = data?.staff || [];
+  const branches: any[] = data?.branches || [];
 
   const todayBookings = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return bookings.filter((b) => String(b.date).slice(0, 10) === today);
   }, [bookings]);
-
-  const upcoming = useMemo(
-    () =>
-      bookings
-        .filter((b) => b.status === 'pending' || b.status === 'confirmed')
-        .slice(0, 8),
-    [bookings],
-  );
 
   if (loading) return <LoadingBlock />;
 
@@ -95,7 +63,7 @@ export default function OwnerShopHome() {
           shop ? <Badge tone={badgeTone('shop', status)}>{shopStatusAr[status] || status}</Badge> : null
         }
       />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={shopError || error} />
 
       <div className="grid cols-3">
         <StatCard icon="💵" label="إيراد 30 يوم" value={money(analytics?.monthlyRevenue)} />

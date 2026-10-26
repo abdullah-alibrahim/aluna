@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { arAuthError } from '../../lib/ownerShop';
+import { useOwnerShopId } from '../../hooks/useOwnerShopId';
 import { api } from '../../lib/api';
 import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, CardHeader, Field } from '../../components/ui';
 
 export default function OwnerBranches() {
-  const { shopId } = useParams();
+  const { shopId, ready, error: shopError } = useOwnerShopId('branches');
   const [branches, setBranches] = useState<any[]>([]);
   const [cities, setCities] = useState<any[]>([]);
   const [name, setName] = useState('');
@@ -19,18 +20,20 @@ export default function OwnerBranches() {
   const [originalCityId, setOriginalCityId] = useState('');
 
   const load = async () => {
+    if (!shopId) return;
     setLoading(true);
     try {
       setBranches(await api(`/owner/shops/${shopId}/branches`));
       setError('');
     } catch (e: any) {
-      setError(e.message);
+      setError(arAuthError(e.message, e.code) || e.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!ready || !shopId) return;
     load();
     api('/auth/cities')
       .then((list: any[]) => {
@@ -38,7 +41,8 @@ export default function OwnerBranches() {
         if (list[0]?._id) setCityId(list[0]._id);
       })
       .catch(() => undefined);
-  }, [shopId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, shopId]);
 
   const resetForm = () => {
     setName('');
@@ -129,7 +133,7 @@ export default function OwnerBranches() {
   return (
     <div className="stack">
       <PageHeader title="الفروع" subtitle={`${branches.length} فرع`} backTo={`/owner/shops/${shopId}`} />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={shopError || error} />
 
       <form className="card stack" onSubmit={onSubmit}>
         <CardHeader title={editingId ? 'تعديل الفرع' : 'إضافة فرع'} />

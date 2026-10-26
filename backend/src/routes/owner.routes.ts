@@ -8,6 +8,7 @@ import {
   deleteService,
   getShopBookings,
   updateBookingStatus,
+  getMyBookings,
   getMyWallet,
   getWalletTransactions,
   requestWithdrawal,
@@ -18,6 +19,7 @@ import {
   addStaff,
   getShopStaff,
   getShopAnalytics,
+  getShopDashboard,
   addPortfolioItem,
   deletePortfolioItem,
   updateShop,
@@ -86,6 +88,7 @@ router.route('/shops/:shopId/services/:serviceId')
 // Bookings
 router.route('/shops/:shopId/bookings')
   .get(catchAsync(getShopBookings));
+router.get('/bookings', catchAsync(getMyBookings));
 router.patch('/bookings/:id/status', catchAsync(updateBookingStatus));
 
 // Coupons
@@ -108,6 +111,7 @@ router.route('/shops/:shopId/staff/:staffId')
 
 // Analytics
 router.get('/shops/:shopId/analytics', catchAsync(getShopAnalytics));
+router.get('/shops/:shopId/dashboard', catchAsync(getShopDashboard));
 
 // Portfolio
 router.post('/shops/:shopId/portfolio', upload.single('image'), catchAsync(addPortfolioItem));

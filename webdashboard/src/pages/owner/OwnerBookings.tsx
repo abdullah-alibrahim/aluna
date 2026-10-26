@@ -1,63 +1,94 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, money } from '../../lib/api';
 import { badgeTone, bookingStatusAr, formatDate } from '../../lib/labels';
+import { arAuthError } from '../../lib/ownerShop';
+import { useOwnerShopId } from '../../hooks/useOwnerShopId';
 import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, Toolbar } from '../../components/ui';
 
+const PAGE_SIZE = 20;
+
 export default function OwnerBookings() {
-  const { shopId } = useParams();
+  const { shopId, ready, error: shopError } = useOwnerShopId('bookings');
   const [items, setItems] = useState<any[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [status, setStatusFilter] = useState('all');
   const [busyId, setBusyId] = useState('');
+  const skipRef = useRef(0);
 
-  const load = async () => {
+  const fetchPage = async (nextStatus: string, reset: boolean) => {
+    if (!shopId) return;
+    const skip = reset ? 0 : skipRef.current;
+    const query = new URLSearchParams({ limit: String(PAGE_SIZE), skip: String(skip) });
+    if (nextStatus !== 'all') query.set('status', nextStatus);
+
+    const page: any[] = await api(`/owner/shops/${shopId}/bookings?${query.toString()}`);
+    skipRef.current = skip + (page?.length || 0);
+    setHasMore((page?.length || 0) === PAGE_SIZE);
+    setItems((prev) => (reset ? page : [...prev, ...page]));
+  };
+
+  const load = async (nextStatus = status) => {
     setLoading(true);
     try {
-      setItems(await api(`/owner/shops/${shopId}/bookings`));
+      await fetchPage(nextStatus, true);
       setError('');
     } catch (e: any) {
-      setError(e.message);
+      setError(arAuthError(e.message, e.code) || 'تعذّر تحميل الحجوزات');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
-  }, [shopId]);
+    if (!ready || !shopId) return;
+    load(status);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, shopId, status]);
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      await fetchPage(status, false);
+    } catch (e: any) {
+      setError(arAuthError(e.message, e.code) || 'تعذّر تحميل المزيد');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const setStatus = async (id: string, next: string) => {
     setBusyId(id);
+    // Optimistic update keeps the table snappy; server response reconciles shortly after.
+    setItems((prev) => prev.map((b) => (b._id === id ? { ...b, status: next } : b)));
     try {
-      await api(`/owner/bookings/${id}/status`, {
+      const updated = await api(`/owner/bookings/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status: next }),
       });
-      await load();
+      setItems((prev) => prev.map((b) => (b._id === id ? { ...b, ...(updated as any) } : b)));
+      if (status !== 'all' && next !== status) {
+        setItems((prev) => prev.filter((b) => b._id !== id));
+      }
+      setError('');
     } catch (e: any) {
-      alert(e.message);
+      setError(arAuthError(e.message, e.code) || 'تعذّر تحديث الحالة');
+      load(status);
     } finally {
       setBusyId('');
     }
   };
 
-  const filtered = useMemo(
-    () => (status === 'all' ? items : items.filter((b) => b.status === status)),
-    [items, status],
-  );
+  const total = useMemo(() => items.length, [items]);
 
   if (loading) return <LoadingBlock />;
 
   return (
     <div className="stack">
-      <PageHeader
-        title="حجوزات المركز"
-        subtitle={`${filtered.length} حجز`}
-        backTo="/owner"
-      />
-      <ErrorBanner message={error} />
+      <PageHeader title="حجوزات المركز" subtitle={`${total} حجز`} backTo={`/owner/shops/${shopId || ''}`} />
+      <ErrorBanner message={shopError || error} />
       <Toolbar>
         <select value={status} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">كل الحالات</option>
@@ -69,7 +100,7 @@ export default function OwnerBookings() {
         </select>
       </Toolbar>
       <div className="card">
-        {filtered.length === 0 ? (
+        {items.length === 0 ? (
           <EmptyState title="لا حجوزات" hint="الحجوزات الجديدة تظهر هنا" />
         ) : (
           <div className="table-wrap">
@@ -84,7 +115,7 @@ export default function OwnerBookings() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((b) => (
+                {items.map((b) => (
                   <tr key={b._id}>
                     <td data-label="الزبون">
                       {b.userId?.name || '—'}
@@ -142,6 +173,14 @@ export default function OwnerBookings() {
           </div>
         )}
       </div>
+
+      {hasMore && items.length > 0 && (
+        <div className="row" style={{ justifyContent: 'center' }}>
+          <button type="button" className="secondary" disabled={loadingMore} onClick={loadMore}>
+            {loadingMore ? 'جارٍ التحميل…' : 'تحميل المزيد'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

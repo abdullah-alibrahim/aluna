@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, money } from '../../lib/api';
 import { badgeTone, bookingStatusAr, formatDate } from '../../lib/labels';
+import { arAuthError } from '../../lib/ownerShop';
 import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, Toolbar } from '../../components/ui';
+
+const PAGE_SIZE = 30;
 
 export default function OwnerBookingsAll() {
   const [shops, setShops] = useState<any[]>([]);
@@ -11,23 +14,33 @@ export default function OwnerBookingsAll() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [busyId, setBusyId] = useState('');
+  const skipRef = useRef(0);
+
+  const fetchPage = async (nextShop: string, nextStatus: string, reset: boolean) => {
+    const skip = reset ? 0 : skipRef.current;
+    const query = new URLSearchParams({ limit: String(PAGE_SIZE), skip: String(skip) });
+    if (nextStatus !== 'all') query.set('status', nextStatus);
+    if (nextShop !== 'all') query.set('shopId', nextShop);
+
+    // One aggregated request replaces one request per shop.
+    const page: any[] = await api(`/owner/bookings?${query.toString()}`);
+    skipRef.current = skip + (page?.length || 0);
+    setHasMore((page?.length || 0) === PAGE_SIZE);
+    setBookings((prev) => (reset ? page : [...prev, ...page]));
+  };
 
   const load = async () => {
     setLoading(true);
     try {
-      const myShops = await api('/owner/shops');
+      const [myShops] = await Promise.all([api('/owner/shops')]);
       setShops(myShops || []);
-      const lists = await Promise.all(
-        (myShops || []).map(async (s: any) => {
-          const rows = await api(`/owner/shops/${s._id}/bookings`);
-          return (rows || []).map((b: any) => ({ ...b, shopName: s.name, shopId: s._id }));
-        }),
-      );
-      setBookings(lists.flat().sort((a, b) => String(b.date).localeCompare(String(a.date))));
+      await fetchPage(shopFilter, statusFilter, true);
       setError('');
     } catch (e: any) {
-      setError(e.message);
+      setError(arAuthError(e.message, e.code) || e.message);
     } finally {
       setLoading(false);
     }
@@ -35,26 +48,35 @@ export default function OwnerBookingsAll() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopFilter, statusFilter]);
 
-  const filtered = useMemo(() => {
-    return bookings.filter((b) => {
-      if (shopFilter !== 'all' && b.shopId !== shopFilter) return false;
-      if (statusFilter !== 'all' && b.status !== statusFilter) return false;
-      return true;
-    });
-  }, [bookings, shopFilter, statusFilter]);
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      await fetchPage(shopFilter, statusFilter, false);
+    } catch (e: any) {
+      setError(arAuthError(e.message, e.code) || e.message);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const filtered = useMemo(() => bookings, [bookings]);
 
   const setStatus = async (id: string, status: string) => {
     setBusyId(id);
+    setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, status } : b)));
     try {
-      await api(`/owner/bookings/${id}/status`, {
+      const updated = await api(`/owner/bookings/${id}/status`, {
         method: 'PATCH',
         body: JSON.stringify({ status }),
       });
-      await load();
+      setBookings((prev) => prev.map((b) => (b._id === id ? { ...b, ...(updated as any) } : b)));
+      setError('');
     } catch (e: any) {
-      alert(e.message);
+      setError(arAuthError(e.message, e.code) || 'تعذّر تحديث الحالة');
+      load();
     } finally {
       setBusyId('');
     }
@@ -64,7 +86,7 @@ export default function OwnerBookingsAll() {
 
   return (
     <div className="stack">
-      <PageHeader title="كل الحجوزات" subtitle={`${filtered.length} حجز عبر مراكزك`} />
+      <PageHeader title="كل الحجوزات" subtitle={`${filtered.length} حجز عبر ${shops.length} مركز`} backTo="/owner" />
       <ErrorBanner message={error} />
       <Toolbar>
         <select value={shopFilter} onChange={(e) => setShopFilter(e.target.value)}>
@@ -77,16 +99,17 @@ export default function OwnerBookingsAll() {
         </select>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">كل الحالات</option>
-          <option value="pending">معلّق</option>
-          <option value="confirmed">مؤكد</option>
+          <option value="pending">قيد الانتظار</option>
+          <option value="confirmed">مؤكّد</option>
           <option value="completed">مكتمل</option>
           <option value="cancelled">ملغى</option>
+          <option value="no_show">لم يحضر</option>
         </select>
       </Toolbar>
 
-      <div className="card stack">
+      <div className="card">
         {filtered.length === 0 ? (
-          <EmptyState title="لا حجوزات" />
+          <EmptyState title="لا حجوزات" hint="لا توجد حجوزات مطابقة" />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -95,8 +118,8 @@ export default function OwnerBookingsAll() {
                   <th>المركز</th>
                   <th>الزبون</th>
                   <th>الوقت</th>
-                  <th>الحالة</th>
                   <th>المبلغ</th>
+                  <th>الحالة</th>
                   <th></th>
                 </tr>
               </thead>
@@ -104,32 +127,39 @@ export default function OwnerBookingsAll() {
                 {filtered.map((b) => (
                   <tr key={b._id}>
                     <td data-label="المركز">
-                      <Link to={`/owner/shops/${b.shopId}`}>{b.shopName}</Link>
+                      {b.shopId?._id ? (
+                        <Link to={`/owner/shops/${b.shopId._id}/bookings`}>{b.shopId.name}</Link>
+                      ) : (
+                        b.shopName || '—'
+                      )}
                     </td>
                     <td data-label="الزبون">
                       {b.userId?.name || '—'}
                       {b.guestName ? ` / ${b.guestName}` : ''}
                     </td>
-                    <td data-label="الوقت">
-                      {formatDate(b.date)} {b.startTime || ''}
-                    </td>
+                    <td data-label="الوقت">{formatDate(b.date)} {b.startTime || ''}</td>
+                    <td data-label="المبلغ" className="money">{money(b.totalPrice)}</td>
                     <td data-label="الحالة">
                       <Badge tone={badgeTone('booking', b.status)}>
                         {bookingStatusAr[b.status] || b.status}
                       </Badge>
                     </td>
-                    <td data-label="المبلغ" className="money">{money(b.totalPrice)}</td>
                     <td className="row">
-                      {b.status === 'pending' ? (
+                      {b.status === 'pending' && (
                         <button type="button" disabled={busyId === b._id} onClick={() => setStatus(b._id, 'confirmed')}>
                           تأكيد
                         </button>
-                      ) : null}
-                      {b.status === 'confirmed' ? (
-                        <button type="button" disabled={busyId === b._id} onClick={() => setStatus(b._id, 'completed')}>
+                      )}
+                      {(b.status === 'pending' || b.status === 'confirmed') && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          disabled={busyId === b._id}
+                          onClick={() => setStatus(b._id, 'completed')}
+                        >
                           إكمال
                         </button>
-                      ) : null}
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -138,6 +168,14 @@ export default function OwnerBookingsAll() {
           </div>
         )}
       </div>
+
+      {hasMore && filtered.length > 0 && (
+        <div className="row" style={{ justifyContent: 'center' }}>
+          <button type="button" className="secondary" disabled={loadingMore} onClick={loadMore}>
+            {loadingMore ? 'جارٍ التحميل…' : 'تحميل المزيد'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

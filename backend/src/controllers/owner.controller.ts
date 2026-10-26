@@ -17,6 +17,27 @@ import { NotificationType } from '../models/Notification';
 import mongoose from 'mongoose';
 import PlatformSettings from '../models/PlatformSettings';
 import { uploadedImageUrl } from '../middlewares/upload';
+import { buildPosSummary } from './pos.controller';
+
+
+// --- Shared helpers -------------------------------------------------------
+/**
+ * Resolve a shop owned by the current user.
+ * Unknown/invalid ids return 404 with code SHOP_NOT_FOUND so clients can
+ * re-sync their stored shop id (e.g. after a demo DB reseed) instead of
+ * showing a generic "Not authorized" error.
+ */
+async function resolveOwnedShop(shopId: string, userId: string) {
+  if (!shopId || !mongoose.isValidObjectId(shopId)) {
+    throw new NotFoundError('مركز التجميل غير موجود', 'SHOP_NOT_FOUND');
+  }
+  const shop: any = await Shop.findById(shopId).lean();
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود', 'SHOP_NOT_FOUND');
+  if (String(shop.ownerId) !== String(userId)) {
+    throw new ForbiddenError('Not authorized', 'NOT_SHOP_OWNER');
+  }
+  return shop;
+}
 
 // Shops
 export const createShop = async (req: Request, res: Response) => {
@@ -54,6 +75,8 @@ export const createShop = async (req: Request, res: Response) => {
     isActive: true,
   });
 
+  invalidate(`shops:owner:${req.user!.id}`);
+  invalidate(`dashboard:shop:${shop._id}`);
   res.status(201).json(shop);
 };
 
@@ -141,6 +164,8 @@ export const addService = async (req: Request, res: Response) => {
   const service = await Service.create(serviceData);
 
   invalidate(`services:shop:${shopId}:*`);
+  invalidate(`analytics:shop:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.status(201).json(service);
 };
 
@@ -152,10 +177,7 @@ export const getShopServices = async (req: Request, res: Response) => {
     throw new BadRequestError('shopId is required');
   }
 
-  const shop = await Shop.findById(parsedShopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized to view these services');
-  }
+  await resolveOwnedShop(parsedShopId, req.user!.id);
 
   const limit = Math.min(Number(req.query.limit || 50), 100);
   const skip = Number(req.query.skip || 0);
@@ -197,6 +219,8 @@ export const updateService = async (req: Request, res: Response) => {
   await service.populate('categoryId', 'name');
 
   invalidate(`services:shop:${shopId}:*`);
+  invalidate(`analytics:shop:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.json(service);
 };
 
@@ -214,6 +238,8 @@ export const deleteService = async (req: Request, res: Response) => {
   await service.deleteOne();
 
   invalidate(`services:shop:${shopId}:*`);
+  invalidate(`analytics:shop:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.json({ message: 'Service deleted successfully' });
 };
 
@@ -229,9 +255,15 @@ export const getShopBookings = async (req: Request, res: Response) => {
 
   const limit = Math.min(Number(req.query.limit || 50), 100);
   const skip = Number(req.query.skip || 0);
-  const bookings = await cached(`bookings:shop:${parsedShopId}:${limit}:${skip}`, 30, async () => {
-    return await Booking.find({ shopId: parsedShopId as string })
-      .populate('userId', 'name email phone')
+  const statusFilter = (req.query.status as string) || 'all';
+
+  const query: Record<string, unknown> = { shopId: parsedShopId as string };
+  if (statusFilter && statusFilter !== 'all') query.status = statusFilter;
+
+  const bookings = await cached(`bookings:shop:${parsedShopId}:${statusFilter}:${limit}:${skip}`, 30, async () => {
+    return await Booking.find(query)
+      .select('userId guestName groupId date startTime status totalPrice serviceIds staffId pointsEarned createdAt')
+      .populate('userId', 'name phone')
       .populate('serviceIds', 'name price duration')
       .populate('staffId', 'name')
       .sort({ date: -1, startTime: -1 })
@@ -239,6 +271,45 @@ export const getShopBookings = async (req: Request, res: Response) => {
       .limit(limit)
       .lean();
   });
+  res.json(bookings);
+};
+
+/**
+ * All bookings across every shop the owner has — one request instead of N.
+ * Supports status/shop filters and pagination; cached briefly and invalidated
+ * whenever a booking status changes.
+ */
+export const getMyBookings = async (req: Request, res: Response) => {
+  const limit = Math.min(Number(req.query.limit || 50), 100);
+  const skip = Number(req.query.skip || 0);
+  const statusFilter = (req.query.status as string) || 'all';
+  const shopFilter = (req.query.shopId as string) || 'all';
+
+  const shops = await Shop.find({ ownerId: req.user!.id }).select('_id name').lean();
+  if (!shops.length) {
+    res.json([]);
+    return;
+  }
+
+  const ownedIds = shops.map((s: any) => s._id);
+  const query: Record<string, unknown> = {
+    shopId: shopFilter !== 'all' && mongoose.isValidObjectId(shopFilter) ? shopFilter : { $in: ownedIds },
+  };
+  if (statusFilter !== 'all') query.status = statusFilter;
+
+  const key = `bookings:owner:${req.user!.id}:${shopFilter}:${statusFilter}:${limit}:${skip}`;
+  const bookings = await cached(key, 20, async () =>
+    Booking.find(query)
+      .select('shopId userId guestName groupId date startTime status totalPrice serviceIds staffId pointsEarned createdAt')
+      .populate('shopId', 'name')
+      .populate('userId', 'name phone')
+      .populate('serviceIds', 'name price')
+      .sort({ date: -1, startTime: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+  );
+
   res.json(bookings);
 };
 
@@ -404,7 +475,15 @@ export const updateBookingStatus = async (req: Request, res: Response) => {
     );
   }
 
-  invalidate(`bookings:shop:${booking.shopId}:*`);
+  // `booking.shopId` is populated here, so use the document id for cache keys.
+  const shopKey = String(shop._id || booking.shopId);
+  invalidate(`bookings:shop:${shopKey}:*`);
+  invalidate(`bookings:owner:${shop.ownerId}:*`);
+  invalidate(`analytics:shop:${shopKey}`);
+  invalidate(`dashboard:shop:${shopKey}`);
+  invalidate(`pos:summary:${shopKey}`);
+  invalidate(`wallet:owner:${shop.ownerId}`);
+  invalidate(`wallettx:owner:${shop.ownerId}:*`);
   res.json(booking);
 };
 
@@ -417,11 +496,14 @@ export const getWalletTransactions = async (req: Request, res: Response) => {
   const filter: any = { ownerId: req.user!.id };
   if (type) filter.type = type;
 
-  const transactions = await Transaction.find(filter)
-    .populate('shopId', 'name')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  const transactions = await cached(`wallettx:owner:${req.user!.id}:${limit}:${skip}:${type || 'all'}`, 10, async () =>
+    Transaction.find(filter)
+      .populate('shopId', 'name')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+  );
 
   res.json(transactions);
 };
@@ -433,12 +515,16 @@ export const getMyWallet = async (req: Request, res: Response) => {
     wallet = await Wallet.create({ ownerId: req.user!.id });
   }
 
-  const withdrawals = await WithdrawalRequest.find({ ownerId: req.user!.id }).sort({ createdAt: -1 });
-
-  res.json({
-    wallet,
-    withdrawals,
+  const data = await cached(`wallet:owner:${req.user!.id}`, 10, async () => {
+    const withdrawals = await WithdrawalRequest.find({ ownerId: req.user!.id })
+      .sort({ createdAt: -1 })
+      .lean();
+    return {
+      wallet,
+      withdrawals,
+    };
   });
+  res.json(data);
 };
 
 export const requestWithdrawal = async (req: Request, res: Response) => {
@@ -482,6 +568,8 @@ export const requestWithdrawal = async (req: Request, res: Response) => {
       amount: numericAmount,
       payoutDetails,
     });
+    invalidate(`wallet:owner:${req.user!.id}`);
+    invalidate(`wallettx:owner:${req.user!.id}:*`);
     res.status(201).json(request);
   } catch (err) {
     await Wallet.findOneAndUpdate(
@@ -497,10 +585,7 @@ export const createCoupon = async (req: Request, res: Response) => {
   const { shopId } = req.params;
   const { code, discountPercentage, maxDiscount, expiryDate, usageLimit, isActive } = req.body;
 
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
+  const shop = await resolveOwnedShop(shopId as string, req.user!.id);
 
   // Ensure code is unique for this shop
   const existing = await Coupon.findOne({ code: code.toUpperCase(), shopId: shopId as string });
@@ -518,18 +603,18 @@ export const createCoupon = async (req: Request, res: Response) => {
     isActive: isActive !== undefined ? isActive : true,
   });
 
+  invalidate(`coupons:shop:${shopId}`);
   res.status(201).json(coupon);
 };
 
 export const getShopCoupons = async (req: Request, res: Response) => {
   const { shopId } = req.params;
 
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
+  const shop = await resolveOwnedShop(shopId as string, req.user!.id);
 
-  const coupons = await Coupon.find({ shopId: shopId as string }).sort({ createdAt: -1 });
+  const coupons = await cached(`coupons:shop:${shopId}`, 30, async () =>
+    Coupon.find({ shopId: shopId as string }).sort({ createdAt: -1 }).lean()
+  );
   res.json(coupons);
 };
 
@@ -537,10 +622,7 @@ export const updateCoupon = async (req: Request, res: Response) => {
   const { shopId, couponId } = req.params;
   const updates = req.body;
 
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
+  const shop = await resolveOwnedShop(shopId as string, req.user!.id);
 
   // Prevent code duplication
   if (updates.code) {
@@ -559,20 +641,19 @@ export const updateCoupon = async (req: Request, res: Response) => {
 
   if (!coupon) throw new NotFoundError('Coupon not found');
 
+  invalidate(`coupons:shop:${shopId}`);
   res.json(coupon);
 };
 
 export const deleteCoupon = async (req: Request, res: Response) => {
   const { shopId, couponId } = req.params;
 
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
+  const shop = await resolveOwnedShop(shopId as string, req.user!.id);
 
   const coupon = await Coupon.findOneAndDelete({ _id: couponId as string, shopId: shopId as string });
   if (!coupon) throw new NotFoundError('Coupon not found');
 
+  invalidate(`coupons:shop:${shopId}`);
   res.json({ message: 'Coupon deleted successfully' });
 };
 
@@ -581,10 +662,7 @@ export const addStaff = async (req: Request, res: Response) => {
   const { shopId } = req.params;
   const { name, role, servicesProvided, workingHours, globalBreakStart, globalBreakEnd, branchId } = req.body;
 
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
+  const shop = await resolveOwnedShop(shopId as string, req.user!.id);
 
   if (branchId) {
     const branch = await Branch.findOne({ _id: branchId, shopId: shopId as string, isActive: true });
@@ -619,10 +697,14 @@ export const addStaff = async (req: Request, res: Response) => {
 
 export const getShopStaff = async (req: Request, res: Response) => {
   const { shopId } = req.params;
+  await resolveOwnedShop(shopId as string, req.user!.id);
 
-  const staff = await Staff.find({ shopId: shopId as string })
-    .populate('servicesProvided', 'name')
-    .populate('branchId', 'name isMain');
+  const staff = await cached(`staff:shop:${shopId}`, 30, async () =>
+    Staff.find({ shopId: shopId as string })
+      .populate('servicesProvided', 'name')
+      .populate('branchId', 'name isMain')
+      .lean()
+  );
   res.json(staff);
 };
 
@@ -691,6 +773,8 @@ export const updateStaff = async (req: Request, res: Response) => {
   await staff.save();
   await staff.populate('servicesProvided', 'name');
 
+  invalidate(`staff:shop:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.json(staff);
 };
 
@@ -709,20 +793,15 @@ export const deleteStaff = async (req: Request, res: Response) => {
 
   await Staff.findByIdAndDelete(staffId);
 
+  invalidate(`staff:shop:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.json({ message: 'Staff deleted successfully' });
 };
 
 
 // Analytics
-export const getShopAnalytics = async (req: Request, res: Response) => {
-  const { shopId } = req.params;
-
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
-
-  const shopObjId = new mongoose.Types.ObjectId(shopId as string);
+export async function buildShopAnalytics(shopId: string) {
+  const shopObjId = new mongoose.Types.ObjectId(shopId);
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const today = new Date(new Date().setHours(0, 0, 0, 0));
@@ -819,12 +898,65 @@ export const getShopAnalytics = async (req: Request, res: Response) => {
     cancellationRate = (cancellationResult[0].cancelledBookings / cancellationResult[0].totalBookings) * 100;
   }
 
-  res.json({
+  return {
     monthlyRevenue,
     topServices,
     cancellationRate: parseFloat(cancellationRate.toFixed(2)),
     upcomingAppointments
+  };
+}
+
+export const getShopAnalytics = async (req: Request, res: Response) => {
+  const { shopId } = req.params;
+  await resolveOwnedShop(shopId as string, req.user!.id);
+  const data = await cached(`analytics:shop:${shopId}`, 20, () => buildShopAnalytics(shopId as string));
+  res.json(data);
+};
+
+// Aggregated dashboard payload — one round-trip instead of six.
+export const getShopDashboard = async (req: Request, res: Response) => {
+  const { shopId } = req.params;
+  await resolveOwnedShop(shopId as string, req.user!.id);
+
+  const data = await cached(`dashboard:shop:${shopId}`, 20, async () => {
+    const today = new Date(new Date().setHours(0, 0, 0, 0));
+
+    const [shop, analytics, pos, bookings, upcoming, staff, branches] = await Promise.all([
+      Shop.findById(shopId)
+        .select('-ownerId -rejectionReason -__v')
+        .populate('cityId', 'name')
+        .lean(),
+      buildShopAnalytics(shopId as string),
+      buildPosSummary(shopId as string),
+      Booking.find({ shopId: shopId as string })
+        .select('userId guestName date startTime status totalPrice serviceIds')
+        .populate('userId', 'name')
+        .sort({ date: -1, startTime: -1 })
+        .limit(30)
+        .lean(),
+      Booking.find({
+        shopId: shopId as string,
+        date: { $gte: today },
+        status: { $in: [BookingStatus.PENDING, BookingStatus.CONFIRMED] },
+      })
+        .select('userId guestName date startTime status totalPrice serviceIds')
+        .populate('userId', 'name')
+        .sort({ date: 1, startTime: 1 })
+        .limit(10)
+        .lean(),
+      Staff.find({ shopId: shopId as string })
+        .select('name role avatar branchId isActive')
+        .lean(),
+      Branch.find({ shopId: shopId as string })
+        .select('name isMain isActive address')
+        .sort({ isMain: -1, createdAt: 1 })
+        .lean(),
+    ]);
+
+    return { shop, analytics, pos, bookings, upcoming, staff, branches };
   });
+
+  res.json(data);
 };
 
 // Portfolio
@@ -832,10 +964,7 @@ export const addPortfolioItem = async (req: Request, res: Response) => {
   const { shopId } = req.params;
   const { caption, serviceId, staffId } = req.body;
 
-  const shop = await Shop.findById(shopId);
-  if (!shop || shop.ownerId.toString() !== req.user!.id) {
-    throw new ForbiddenError('Not authorized');
-  }
+  const shop = await resolveOwnedShop(shopId as string, req.user!.id);
 
   if (!req.file) {
     throw new BadRequestError('Image file is required');

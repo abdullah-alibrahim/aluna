@@ -5,6 +5,7 @@ import Invoice from '../models/Invoice';
 import Expense from '../models/Expense';
 import Booking, { BookingStatus } from '../models/Booking';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { cached, invalidate } from '../utils/cache';
 
 const paramId = (value: string | string[] | undefined) => {
   if (!value) throw new BadRequestError('معرّف ناقص');
@@ -12,9 +13,9 @@ const paramId = (value: string | string[] | undefined) => {
 };
 
 const assertOwnerShop = async (shopId: string, ownerId: string) => {
-  const shop = await Shop.findById(shopId);
-  if (!shop) throw new NotFoundError('مركز التجميل غير موجود');
-  if (shop.ownerId.toString() !== ownerId) throw new ForbiddenError('غير مصرح');
+  const shop = await Shop.findById(shopId).lean();
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود', 'SHOP_NOT_FOUND');
+  if (String(shop.ownerId) !== String(ownerId)) throw new ForbiddenError('غير مصرح', 'NOT_SHOP_OWNER');
   return shop;
 };
 
@@ -69,7 +70,7 @@ export const createPosInvoice = async (req: Request, res: Response) => {
   const discount = Math.min(Math.max(0, Number(discountAmount) || 0), subtotal);
   const total = subtotal - discount;
 
-  const invoice = await Invoice.create({
+const invoice = await Invoice.create({
     shopId,
     ownerId: req.user!.id,
     branchId: branchId || undefined,
@@ -100,6 +101,7 @@ export const createPosInvoice = async (req: Request, res: Response) => {
     );
   }
 
+  invalidate(`pos:summary:${paramId(req.params.shopId)}`);
   res.status(201).json(invoice);
 };
 
@@ -133,7 +135,7 @@ export const createExpense = async (req: Request, res: Response) => {
     throw new BadRequestError('التصنيف والمبلغ مطلوبان');
   }
 
-  const expense = await Expense.create({
+const expense = await Expense.create({
     shopId,
     ownerId: req.user!.id,
     branchId: branchId || undefined,
@@ -143,6 +145,7 @@ export const createExpense = async (req: Request, res: Response) => {
     date: date ? new Date(date) : new Date(),
   });
 
+  invalidate(`pos:summary:${paramId(req.params.shopId)}`);
   res.status(201).json(expense);
 };
 
@@ -165,26 +168,32 @@ export const deleteExpense = async (req: Request, res: Response) => {
   res.json({ message: 'تم الحذف' });
 };
 
-export const posSummary = async (req: Request, res: Response) => {
-  const shopId = paramId(req.params.shopId);
-  await assertOwnerShop(shopId, req.user!.id);
-
+export async function buildPosSummary(shopId: string) {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
 
   const [todayInvoices, todayExpenses] = await Promise.all([
-    Invoice.find({ shopId, createdAt: { $gte: start }, paymentStatus: 'paid' }),
-    Expense.find({ shopId, date: { $gte: start } }),
+    Invoice.find({ shopId, createdAt: { $gte: start }, paymentStatus: 'paid' })
+      .select('total')
+      .lean(),
+    Expense.find({ shopId, date: { $gte: start } }).select('amount').lean(),
   ]);
 
-  const sales = todayInvoices.reduce((s, i) => s + i.total, 0);
-  const expenses = todayExpenses.reduce((s, e) => s + e.amount, 0);
+  const sales = todayInvoices.reduce((s: number, i: any) => s + (i.total || 0), 0);
+  const expenses = todayExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
 
-  res.json({
+  return {
     date: start.toISOString(),
     invoiceCount: todayInvoices.length,
     sales,
     expenses,
     net: sales - expenses,
-  });
+  };
+}
+
+export const posSummary = async (req: Request, res: Response) => {
+  const shopId = paramId(req.params.shopId);
+  await assertOwnerShop(shopId, req.user!.id);
+  const data = await cached(`pos:summary:${shopId}`, 15, () => buildPosSummary(shopId));
+  res.json(data);
 };

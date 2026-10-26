@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Branch from '../models/Branch';
 import Shop from '../models/Shop';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
+import { cached, invalidate } from '../utils/cache';
 
 const paramId = (value: string | string[] | undefined) => {
   if (!value) throw new BadRequestError('معرّف ناقص');
@@ -9,9 +10,9 @@ const paramId = (value: string | string[] | undefined) => {
 };
 
 const assertOwnerShop = async (shopId: string, ownerId: string) => {
-  const shop = await Shop.findById(shopId);
-  if (!shop) throw new NotFoundError('مركز التجميل غير موجود');
-  if (shop.ownerId.toString() !== ownerId) throw new ForbiddenError('غير مصرح');
+  const shop = await Shop.findById(shopId).lean();
+  if (!shop) throw new NotFoundError('مركز التجميل غير موجود', 'SHOP_NOT_FOUND');
+  if (String(shop.ownerId) !== String(ownerId)) throw new ForbiddenError('غير مصرح', 'NOT_SHOP_OWNER');
   return shop;
 };
 
@@ -34,7 +35,12 @@ export const listOwnerBranches = async (req: Request, res: Response) => {
     });
   }
 
-  const branches = await Branch.find({ shopId }).populate('cityId', 'name').sort({ isMain: -1, createdAt: 1 });
+  const branches = await cached(`branches:shop:${shopId}`, 60, async () =>
+    Branch.find({ shopId })
+      .populate('cityId', 'name')
+      .sort({ isMain: -1, createdAt: 1 })
+      .lean()
+  );
   res.json(branches);
 };
 
@@ -42,9 +48,12 @@ export const listPublicBranches = async (req: Request, res: Response) => {
   const shopId = paramId(req.params.shopId);
   const shop = await Shop.findOne({ _id: shopId as any, isApproved: true });
   if (!shop) throw new NotFoundError('مركز التجميل غير موجود');
-  const branches = await Branch.find({ shopId, isActive: true })
-    .populate('cityId', 'name')
-    .sort({ isMain: -1, name: 1 });
+  const branches = await cached(`branches:public:${shopId}`, 60, async () =>
+    Branch.find({ shopId, isActive: true })
+      .populate('cityId', 'name')
+      .sort({ isMain: -1, name: 1 })
+      .lean()
+  );
   res.json(branches);
 };
 
@@ -75,6 +84,9 @@ export const createBranch = async (req: Request, res: Response) => {
   });
 
   await branch.populate('cityId', 'name');
+  invalidate(`branches:shop:${shopId}`);
+  invalidate(`branches:public:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.status(201).json(branch);
 };
 
@@ -105,6 +117,9 @@ export const updateBranch = async (req: Request, res: Response) => {
 
   await branch.save();
   await branch.populate('cityId', 'name');
+  invalidate(`branches:shop:${shopId}`);
+  invalidate(`branches:public:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.json(branch);
 };
 
@@ -121,5 +136,8 @@ export const deleteBranch = async (req: Request, res: Response) => {
 
   branch.isActive = false;
   await branch.save();
+  invalidate(`branches:shop:${shopId}`);
+  invalidate(`branches:public:${shopId}`);
+  invalidate(`dashboard:shop:${shopId}`);
   res.json({ message: 'تم إيقاف الفرع' });
 };

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { arAuthError } from '../../lib/ownerShop';
+import { useOwnerShopId } from '../../hooks/useOwnerShopId';
 import { api, money } from '../../lib/api';
 import { formatDate } from '../../lib/labels';
 import { EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard, CardHeader, Field } from '../../components/ui';
@@ -7,7 +8,7 @@ import { EmptyState, ErrorBanner, LoadingBlock, PageHeader, StatCard, CardHeader
 type Line = { name: string; unitPrice: string; quantity: string };
 
 export default function OwnerPos() {
-  const { shopId } = useParams();
+  const { shopId, ready, error: shopError } = useOwnerShopId('pos');
   const [summary, setSummary] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -22,6 +23,7 @@ export default function OwnerPos() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
+    if (!shopId) return;
     setLoading(true);
     try {
       const [s, inv, exp] = await Promise.all([
@@ -34,15 +36,17 @@ export default function OwnerPos() {
       setExpenses(exp);
       setError('');
     } catch (e: any) {
-      setError(e.message);
+      setError(arAuthError(e.message, e.code) || e.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!ready || !shopId) return;
     load();
-  }, [shopId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, shopId]);
 
   const previewTotal = useMemo(() => {
     const sub = lines.reduce((sum, l) => {
@@ -119,7 +123,7 @@ export default function OwnerPos() {
   return (
     <div className="stack">
       <PageHeader title="نقطة البيع والمصاريف" subtitle="فواتير سريعة ومتابعة يومية" backTo={`/owner/shops/${shopId}`} />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={shopError || error} />
 
       <div className="grid cols-3">
         <StatCard icon="🧾" label="مبيعات اليوم" value={money(summary?.sales)} />

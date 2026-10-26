@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { arAuthError } from '../../lib/ownerShop';
+import { useOwnerShopId } from '../../hooks/useOwnerShopId';
 import { api } from '../../lib/api';
 import { formatDate } from '../../lib/labels';
 import { Badge, EmptyState, ErrorBanner, LoadingBlock, PageHeader, CardHeader, Field } from '../../components/ui';
 
 export default function OwnerCoupons() {
-  const { shopId } = useParams();
+  const { shopId, ready, error: shopError } = useOwnerShopId('coupons');
   const [items, setItems] = useState<any[]>([]);
   const [code, setCode] = useState('');
   const [discountPercentage, setDiscount] = useState('10');
@@ -24,15 +25,17 @@ export default function OwnerCoupons() {
       setItems(await api(`/owner/shops/${shopId}/coupons`));
       setError('');
     } catch (e: any) {
-      setError(e.message);
+      setError(arAuthError(e.message, e.code) || e.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!ready || !shopId) return;
     load();
-  }, [shopId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, shopId]);
 
   const reset = () => {
     setCode('');
@@ -118,7 +121,7 @@ export default function OwnerCoupons() {
   return (
     <div className="stack">
       <PageHeader title="الكوبونات" subtitle="خصومات للزبائن" backTo={`/owner/shops/${shopId}`} />
-      <ErrorBanner message={error} />
+      <ErrorBanner message={shopError || error} />
 
       <form className="card stack" onSubmit={save}>
         <CardHeader title={editingId ? 'تعديل كوبون' : 'كوبون جديد'} />

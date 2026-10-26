@@ -13,6 +13,7 @@ export const errorHandler = (
     return res.status(err.statusCode).json({
       status: 'error',
       message: err.message,
+      ...(err.code && { code: err.code }),
       ...(env.NODE_ENV === 'development' && { stack: err.stack }),
     });
   }
