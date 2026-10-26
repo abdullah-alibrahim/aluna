@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import mongoose from 'mongoose';
 import rateLimit from 'express-rate-limit';
 import compression from 'compression';
 import swaggerUi from 'swagger-ui-express';
@@ -69,7 +70,18 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Health check route
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'success', message: 'API is running' });
+  const info = (globalThis as any).__alunaDb;
+  res.status(200).json({
+    status: 'success',
+    message: 'API is running',
+    // Safe diagnostics: lets us confirm which database a deployment is bound to.
+    db: {
+      mode: info?.mode || 'uninitialized',
+      host: info?.host || null,
+      state: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    },
+    uptime: Math.round(process.uptime()),
+  });
 });
 
 // Register Routes

@@ -28,7 +28,11 @@ export const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(uri);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    (globalThis as any).__alunaDb = {
+      mode: wantMemory ? 'memory' : isAtlasOrRemote ? 'remote' : 'local',
+      host: conn.connection.host,
+    };
+    console.log(`MongoDB Connected: ${conn.connection.host} (${(globalThis as any).__alunaDb.mode})`);
 
     // Auto-seed only for in-memory Mongo or when explicitly enabled (never wipe/reseed production silently)
     try {
